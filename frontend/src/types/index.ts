@@ -1,0 +1,53 @@
+export type StockStatus = "available" | "low" | "out";
+
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  priceKes: number;
+  discountPct: number | null;
+  stockQty: number;
+  status: StockStatus;
+  images: string[];
+  sizes: string[] | null;
+  rating: number;
+  reviewCount: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface Merchant {
+  id: string;
+  name: string;
+  handle: string;
+  bio: string;
+  location: string;
+  avatarUrl: string;
+  isOnline: boolean;
+  stats: { products: number; orders: number; rating: number };
+  contacts: { whatsapp: string; instagram: string; facebook: string };
+}
+
+export type OrderChannel = "whatsapp" | "instagram" | "facebook" | "direct";
+export type PaymentMethod = "mpesa" | "paypal";
+export type PaymentStatus = "idle" | "pending" | "paid" | "failed";
+
+export interface OrderDraft {
+  productId: string;
+  size: string | null;
+  qty: number;
+  customer: { name: string; phone: string; notes: string };
+  channel: OrderChannel;
+  payment: null | { method: PaymentMethod; status: PaymentStatus };
+}
+
+export interface Favorite {
+  productId: string;
+  addedAt: string;
+}
+
+export interface PaymentResult {
+  status: "paid" | "failed";
+  reference: string;
+}
