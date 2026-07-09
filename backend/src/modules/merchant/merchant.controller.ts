@@ -163,3 +163,55 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+export const updateProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = res.locals.userId;
+    const { id: productId } = req.params;
+    const { name, price, stock, description } = req.body;
+
+    const { data: shop } = await supabase.from('shops').select('id').eq('owner_id', userId).single();
+    if (!shop) { res.status(404).json({ error: 'Shop not found' }); return; }
+
+    // 1. Verify product ownership
+    const { data: existingProduct } = await supabase.from('products').select('shop_id').eq('id', productId).single();
+    if (!existingProduct || existingProduct.shop_id !== shop.id) {
+      res.status(403).json({ error: 'Forbidden: You do not own this product' }); return;
+    }
+
+    // 2. Perform update
+    const { data, error } = await supabase
+      .from('products')
+      .update({ name, price, stock, description })
+      .eq('id', productId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = res.locals.userId;
+    const { id: productId } = req.params;
+
+    const { data: shop } = await supabase.from('shops').select('id').eq('owner_id', userId).single();
+    if (!shop) { res.status(404).json({ error: 'Shop not found' }); return; }
+
+    const { data: existingProduct } = await supabase.from('products').select('shop_id').eq('id', productId).single();
+    if (!existingProduct || existingProduct.shop_id !== shop.id) {
+      res.status(403).json({ error: 'Forbidden' }); return;
+    }
+
+    const { error } = await supabase.from('products').delete().eq('id', productId);
+    if (error) throw error;
+
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
