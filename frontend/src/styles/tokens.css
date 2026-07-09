@@ -23,10 +23,87 @@
 
   --shadow-soft: 0 1px 4px rgba(0, 0, 0, 0.06);
   --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.22);
+  --shadow-float: 0 14px 40px rgba(28, 25, 23, 0.16);
 }
 
 :root {
   color-scheme: light;
+
+  /* Liquid-glass system: translucent fills + luminous edges layered over
+     the ambient atmosphere below. Tuned warm to sit on the stone surface. */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-bg-strong: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --glass-blur: 20px;
+  --shadow-glass: 0 8px 30px rgba(28, 25, 23, 0.1);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+/* Ambient atmosphere — the thing the glass actually refracts. Faint brand-hue
+   light blooms over the warm surface, fixed so it stays put while content scrolls. */
+.app-surface {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(72% 55% at 10% -6%, rgba(13, 148, 136, 0.16), transparent 60%),
+    radial-gradient(58% 46% at 108% 6%, rgba(225, 29, 72, 0.11), transparent 60%),
+    radial-gradient(85% 60% at 50% 110%, rgba(13, 148, 136, 0.12), transparent 62%);
+  background-attachment: fixed;
+}
+
+/* Frosted panel — base translucent glass with a soft edge highlight. */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass), var(--glass-highlight);
+}
+
+/* Higher-opacity glass for surfaces that carry text and must stay legible. */
+.glass-strong {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass), var(--glass-highlight);
+}
+
+/* Sticky header glass — frosted with only a bottom hairline so it reads as a
+   ledge over the content, not a floating box. */
+.glass-header {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Floating tab bar — the signature element. Deeper float shadow + a specular
+   sheen across the top edge so it reads as a solid pane of liquid glass. */
+.glass-nav {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-float), var(--glass-highlight);
+}
+.glass-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 46%);
+  pointer-events: none;
+}
+
+/* Fallback for browsers without backdrop-filter: lean opaque so nothing washes out. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong,
+  .glass-nav,
+  .glass-header {
+    background: rgba(255, 255, 255, 0.92);
+  }
 }
 
 html,

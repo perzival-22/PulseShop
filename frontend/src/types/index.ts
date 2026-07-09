@@ -47,6 +47,14 @@ export interface Favorite {
   addedAt: string;
 }
 
+/** The signed-in merchant's session identity. */
+export interface AuthUser {
+  id: string;
+  email: string;
+  shopName: string;
+  shopSlug: string;
+}
+
 export interface PaymentResult {
   status: "paid" | "failed";
   reference: string;

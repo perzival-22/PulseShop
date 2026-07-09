@@ -1,24 +1,25 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Minus, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { z } from "zod";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { discountedPrice, formatKes } from "@/lib/currency";
-import { orderLink } from "@/lib/deeplinks";
+import { formatKes } from "@/lib/currency";
+import { cartOrderLink } from "@/lib/deeplinks";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
 import type { PaymentMethod } from "@/types";
+import { cartSubtotal, useCart } from "@/stores/cart";
 import { useOrderStore } from "@/stores/order";
 import { useOrderHistory } from "@/stores/orderHistory";
 import { useToasts } from "@/stores/toast";
-import { PaymentSheet } from "./PaymentSheet";
+import { PaymentSheet } from "@/routes/order/PaymentSheet";
 
 const customerSchema = z.object({
   name: z.string().min(2, "Enter your full name"),
@@ -37,19 +38,16 @@ const channels: { id: Channel; label: string; icon: typeof WhatsAppIcon }[] = [
   { id: "facebook", label: "Facebook", icon: FacebookIcon },
 ];
 
-export function OrderPage() {
-  const { id = "" } = useParams();
+export function CheckoutPage() {
   const navigate = useNavigate();
   const push = useToasts((s) => s.push);
 
-  const productQ = useQuery({
-    queryKey: ["product", id],
-    queryFn: () => services.products.getProduct(id),
-  });
-  const merchantQ = useQuery({ queryKey: ["merchant"], queryFn: services.products.getMerchant });
-
-  const { selectedSize, qty, setQty, customer, saveCustomer } = useOrderStore();
+  const items = useCart((s) => s.items);
+  const clearCart = useCart((s) => s.clear);
+  const { customer, saveCustomer } = useOrderStore();
   const addOrder = useOrderHistory((s) => s.add);
+
+  const merchantQ = useQuery({ queryKey: ["merchant"], queryFn: services.products.getMerchant });
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [payOpen, setPayOpen] = useState(false);
 
@@ -65,10 +63,11 @@ export function OrderPage() {
     mode: "onBlur",
   });
 
-  const product = productQ.data;
-  const merchant = merchantQ.data;
+  // Nothing to check out — bounce back to the cart.
+  if (items.length === 0) return <Navigate to="/cart" replace />;
 
-  if (productQ.isLoading || !merchant) {
+  const merchant = merchantQ.data;
+  if (!merchant) {
     return (
       <MobileShell nav={false}>
         <div className="space-y-4 p-4">
@@ -80,48 +79,42 @@ export function OrderPage() {
     );
   }
 
-  if (!product) {
-    return (
-      <MobileShell nav={false}>
-        <div className="flex min-h-[60dvh] flex-col items-center justify-center gap-3 text-center">
-          <p className="text-lg font-bold text-ink">Product not found</p>
-          <Link to="/" className="font-semibold text-primary">
-            Back to store
-          </Link>
-        </div>
-      </MobileShell>
-    );
-  }
+  const total = cartSubtotal(items);
 
-  const unitPrice = discountedPrice(product.priceKes, product.discountPct);
-  const total = unitPrice * qty;
-
-  const recordOrder = (reference: string, paymentMethod: PaymentMethod | null, ch: Channel | "direct") => {
-    addOrder({
-      reference,
-      productId: product.id,
-      productName: product.name,
-      image: product.images[0],
-      size: selectedSize,
-      qty,
-      totalKes: total,
-      channel: ch,
-      paymentMethod,
-      placedAt: new Date().toISOString(),
-    });
+  const recordOrders = (reference: string, paymentMethod: PaymentMethod | null, ch: Channel | "direct") => {
+    const placedAt = new Date().toISOString();
+    for (const item of items) {
+      addOrder({
+        reference,
+        productId: item.productId,
+        productName: item.name,
+        image: item.image,
+        size: item.size,
+        qty: item.qty,
+        totalKes: item.unitPrice * item.qty,
+        channel: ch,
+        paymentMethod,
+        placedAt,
+      });
+    }
   };
 
   const sendOrder = handleSubmit((data) => {
     saveCustomer({ name: data.name, phone: data.phone, notes: data.notes ?? "" });
-    const url = orderLink(
+    const url = cartOrderLink(
       merchant,
-      product,
-      { size: selectedSize, qty, name: data.name, phone: data.phone, notes: data.notes ?? "" },
+      items.map((i) => ({ name: i.name, size: i.size, qty: i.qty, unitPrice: i.unitPrice })),
+      { name: data.name, phone: data.phone, notes: data.notes ?? "" },
       channel,
     );
-    recordOrder(`PS-${Date.now().toString(36).toUpperCase()}`, null, channel);
+    recordOrders(`PS-${Date.now().toString(36).toUpperCase()}`, null, channel);
     window.open(url, "_blank", "noopener");
-    push(`Order sent via ${channel === "whatsapp" ? "WhatsApp" : channel === "instagram" ? "Instagram" : "Facebook"}`, "success");
+    clearCart();
+    push(
+      `Order sent via ${channel === "whatsapp" ? "WhatsApp" : channel === "instagram" ? "Instagram" : "Facebook"}`,
+      "success",
+    );
+    navigate("/orders");
   });
 
   const openPayment = async () => {
@@ -146,56 +139,31 @@ export function OrderPage() {
         >
           <ArrowLeft className="size-5" />
         </button>
-        <h1 className="text-base font-extrabold text-ink">Place Order</h1>
+        <h1 className="text-base font-extrabold text-ink">Checkout</h1>
       </header>
 
       <div className="space-y-4 px-4 pb-10 pt-1">
-        {/* product summary */}
-        <div className="flex gap-3 rounded-card bg-card p-3 shadow-soft">
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="size-20 rounded-xl object-cover"
-          />
-          <div className="flex flex-1 flex-col justify-between py-0.5">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-bold text-ink">{product.name}</p>
+        {/* order summary */}
+        <div className="space-y-3 rounded-card bg-card p-4 shadow-soft">
+          <h2 className="text-sm font-bold text-ink">Order summary</h2>
+          {items.map((item) => (
+            <div
+              key={`${item.productId}-${item.size ?? "one"}`}
+              className="flex items-center gap-3"
+            >
+              <img src={item.image} alt={item.name} className="size-12 rounded-lg object-cover" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-ink">{item.name}</p>
                 <p className="text-xs text-muted">
-                  {selectedSize ? `Size ${selectedSize} · ` : ""}Qty {qty}
+                  {item.size ? `Size ${item.size} · ` : ""}Qty {item.qty}
                 </p>
               </div>
-              <Link
-                to={`/product/${product.id}`}
-                aria-label="Edit selection"
-                className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-stone-100"
-              >
-                <Pencil className="size-4" />
-              </Link>
+              <p className="text-sm font-bold text-ink">{formatKes(item.unitPrice * item.qty)}</p>
             </div>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-extrabold text-primary">{formatKes(total)}</p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  aria-label="Decrease quantity"
-                  onClick={() => setQty(qty - 1)}
-                  disabled={qty <= 1}
-                  className="flex size-7 items-center justify-center rounded-full bg-stone-100 disabled:opacity-40"
-                >
-                  <Minus className="size-3.5" />
-                </button>
-                <span className="w-5 text-center text-sm font-bold">{qty}</span>
-                <button
-                  type="button"
-                  aria-label="Increase quantity"
-                  onClick={() => setQty(Math.min(qty + 1, product.stockQty))}
-                  className="flex size-7 items-center justify-center rounded-full bg-stone-100"
-                >
-                  <Plus className="size-3.5" />
-                </button>
-              </div>
-            </div>
+          ))}
+          <div className="flex items-center justify-between border-t border-stone-100 pt-3">
+            <span className="text-base font-bold text-ink">Total</span>
+            <span className="text-lg font-extrabold text-primary">{formatKes(total)}</span>
           </div>
         </div>
 
@@ -249,9 +217,9 @@ export function OrderPage() {
             ))}
           </div>
           <p className="text-xs leading-relaxed text-muted">
-            Your order will be sent to <span className="font-bold text-ink">{merchant.name}</span>{" "}
-            via <span className="font-bold text-ink capitalize">{channel}</span>. They'll confirm
-            stock and delivery.
+            Your order will be sent to <span className="font-bold text-ink">{merchant.name}</span> via{" "}
+            <span className="font-bold text-ink capitalize">{channel}</span>. They'll confirm stock
+            and delivery.
           </p>
         </div>
 
@@ -276,7 +244,11 @@ export function OrderPage() {
         amount={total}
         defaultPhone={getValues("phone") || customer.phone}
         merchantWhatsApp={merchant.contacts.whatsapp}
-        onPaid={(reference, method) => recordOrder(reference, method, "direct")}
+        onPaid={(reference, method) => {
+          recordOrders(reference, method, "direct");
+          clearCart();
+          navigate("/orders");
+        }}
       />
     </MobileShell>
   );

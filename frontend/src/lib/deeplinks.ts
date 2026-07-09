@@ -46,6 +46,42 @@ export function orderLink(
   }
 }
 
+/** Pre-filled order message for a multi-item cart checkout. */
+export function cartOrderLink(
+  merchant: Merchant,
+  items: { name: string; size: string | null; qty: number; unitPrice: number }[],
+  opts: { name: string; phone: string; notes: string },
+  channel: Exclude<OrderChannel, "direct">,
+) {
+  const total = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  const lines = [
+    `🛍️ New order for ${merchant.name}`,
+    ``,
+    ...items.map(
+      (i) =>
+        `• ${i.name}${i.size ? ` (Size ${i.size})` : ""} × ${i.qty} — ${formatKes(
+          i.unitPrice * i.qty,
+        )}`,
+    ),
+    ``,
+    `Total: ${formatKes(total)}`,
+    ``,
+    `Name: ${opts.name}`,
+    `Phone: ${opts.phone}`,
+    opts.notes ? `Notes: ${opts.notes}` : null,
+  ].filter((l): l is string => l !== null);
+  const msg = lines.join("\n");
+
+  switch (channel) {
+    case "whatsapp":
+      return `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`;
+    case "instagram":
+      return `https://ig.me/m/${merchant.contacts.instagram}`;
+    case "facebook":
+      return `https://m.me/${merchant.contacts.facebook}`;
+  }
+}
+
 export function merchantChatLink(merchant: Merchant) {
   const msg = `Hi ${merchant.name}! 👋`;
   return `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`;

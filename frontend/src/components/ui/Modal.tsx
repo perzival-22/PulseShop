@@ -24,7 +24,7 @@ export function Modal({
         <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm" />
         <Dialog.Content
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-modal bg-card p-6 shadow-modal animate-modal-in focus:outline-none",
+            "glass-strong fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-modal p-6 animate-modal-in focus:outline-none",
             className,
           )}
         >
@@ -67,7 +67,7 @@ export function Sheet({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 rounded-t-modal bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-modal animate-sheet-up focus:outline-none">
+        <Dialog.Content className="glass-strong fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 rounded-t-modal p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-sheet-up focus:outline-none">
           <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-stone-200" />
           <div className="mb-4 flex items-center justify-between">
             <Dialog.Title className="text-lg font-extrabold text-ink">{title}</Dialog.Title>

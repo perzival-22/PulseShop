@@ -1,16 +1,50 @@
-import { Heart } from "lucide-react";
+import { Heart, ShoppingBag } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 import type { Product } from "@/types";
 import { cn } from "@/lib/utils";
 import { discountedPrice, formatKes } from "@/lib/currency";
+import { Button } from "@/components/ui/Button";
+import { Sheet } from "@/components/ui/Modal";
+import { useCart } from "@/stores/cart";
 import { useFavorites } from "@/stores/favorites";
+import { useToasts } from "@/stores/toast";
+import { SizeSelector } from "./SizeSelector";
 import { StockBadge } from "./StockBadge";
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
   const isFavorite = useFavorites((s) => s.isFavorite(product.id));
   const toggle = useFavorites((s) => s.toggle);
+  const addToCart = useCart((s) => s.add);
+  const push = useToasts((s) => s.push);
+
+  const [sizeSheetOpen, setSizeSheetOpen] = useState(false);
+  const [chosenSize, setChosenSize] = useState<string | null>(null);
+
   const soldOut = product.status === "out";
   const finalPrice = discountedPrice(product.priceKes, product.discountPct);
+  const hasSizes = !!product.sizes && product.sizes.length > 0;
+
+  const add = (size: string | null) => {
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      image: product.images[0],
+      unitPrice: finalPrice,
+      size,
+      stockQty: product.stockQty,
+    });
+    push("Added to cart", "success");
+  };
+
+  const onAddClick = () => {
+    if (hasSizes) {
+      setChosenSize(null);
+      setSizeSheetOpen(true);
+    } else {
+      add(null);
+    }
+  };
 
   return (
     <div
@@ -76,6 +110,48 @@ export function ProductCard({ product, className }: { product: Product; classNam
           )}
         />
       </button>
+
+      {!soldOut && (
+        <button
+          type="button"
+          aria-label={hasSizes ? `Choose size for ${product.name}` : `Add ${product.name} to cart`}
+          onClick={onAddClick}
+          className="absolute bottom-2.5 right-2.5 flex size-9 items-center justify-center rounded-full bg-primary text-white shadow-soft transition-transform active:scale-90 hover:bg-primary-deep"
+        >
+          <ShoppingBag className="size-[18px]" />
+        </button>
+      )}
+
+      {hasSizes && (
+        <Sheet open={sizeSheetOpen} onOpenChange={setSizeSheetOpen} title="Select a size">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <img
+                src={product.images[0]}
+                alt={product.name}
+                className="size-14 rounded-xl object-cover"
+              />
+              <div>
+                <p className="text-sm font-bold text-ink">{product.name}</p>
+                <p className="text-sm font-extrabold text-primary">{formatKes(finalPrice)}</p>
+              </div>
+            </div>
+            <SizeSelector sizes={product.sizes ?? []} value={chosenSize} onChange={setChosenSize} />
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={!chosenSize}
+              onClick={() => {
+                add(chosenSize);
+                setSizeSheetOpen(false);
+              }}
+            >
+              <ShoppingBag className="size-5" />
+              Add to Cart
+            </Button>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }

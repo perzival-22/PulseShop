@@ -38,7 +38,7 @@ export function StorefrontPage() {
   return (
     <MobileShell>
       {/* header row */}
-      <header className="flex items-center justify-between px-4 pt-4">
+      <header className="glass-header sticky top-0 z-30 flex items-center justify-between px-4 py-3">
         <span className="text-lg font-extrabold tracking-tight text-primary">PulseShop</span>
         <div className="flex gap-1">
           <button

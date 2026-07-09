@@ -6,4 +6,4 @@ import { mockServices } from "./mock";
 import type { Services } from "./types";
 
 export const services: Services = mockServices;
-export type { ProductInput, Services } from "./types";
+export type { Credentials, ProductInput, Services, SignupInput } from "./types";

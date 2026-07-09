@@ -1,5 +1,5 @@
-import type { Merchant, OrderDraft, PaymentResult, Product } from "@/types";
-import type { ProductInput, Services } from "../types";
+import type { AuthUser, Merchant, OrderDraft, PaymentResult, Product } from "@/types";
+import type { Credentials, ProductInput, Services, SignupInput } from "../types";
 import { statusForQty } from "@/lib/constants";
 import { MERCHANT, PRODUCTS } from "./data";
 
@@ -32,6 +32,28 @@ const makeRef = () =>
   `PS-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
 
 export const mockServices: Services = {
+  auth: {
+    // Accepts any credentials and returns the demo shop's session.
+    async login({ email }: Credentials): Promise<AuthUser> {
+      await delay();
+      return { id: "u1", email, shopName: MERCHANT.name, shopSlug: MERCHANT.handle };
+    },
+
+    async signup(input: SignupInput): Promise<AuthUser> {
+      await delay();
+      return {
+        id: `u${Date.now()}`,
+        email: input.email,
+        shopName: input.shopName,
+        shopSlug: input.shopSlug,
+      };
+    },
+
+    async logout(): Promise<void> {
+      await delay();
+    },
+  },
+
   products: {
     async getMerchant(): Promise<Merchant> {
       await delay();

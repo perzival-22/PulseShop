@@ -12,6 +12,11 @@ import "./styles/tokens.css";
 import { InstallPrompt } from "@/components/layout/InstallPrompt";
 import { Toaster } from "@/components/ui/Toaster";
 import { useToasts } from "@/stores/toast";
+import { LoginPage } from "@/routes/auth/LoginPage";
+import { SignupPage } from "@/routes/auth/SignupPage";
+import { CartPage } from "@/routes/cart/CartPage";
+import { CheckoutPage } from "@/routes/checkout/CheckoutPage";
+import { LandingPage } from "@/routes/marketing/LandingPage";
 import { ComponentsPage } from "@/routes/dev/ComponentsPage";
 import { DashboardPlaceholder } from "@/routes/dashboard/PlaceholderPage";
 import { InventoryPage } from "@/routes/dashboard/InventoryPage";
@@ -43,8 +48,13 @@ createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<StorefrontPage />} />
+          <Route path="/welcome" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order/:id" element={<OrderPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/dashboard" element={<DashboardPlaceholder title="Dashboard Overview" />} />

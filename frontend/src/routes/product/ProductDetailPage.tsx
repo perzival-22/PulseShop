@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, ChevronRight, Heart, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight, Heart, Share2, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
@@ -14,6 +14,7 @@ import { discountedPrice, formatKes } from "@/lib/currency";
 import { productInquiryLinks } from "@/lib/deeplinks";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
+import { useCart } from "@/stores/cart";
 import { useFavorites } from "@/stores/favorites";
 import { useOrderStore } from "@/stores/order";
 import { useToasts } from "@/stores/toast";
@@ -31,6 +32,7 @@ export function ProductDetailPage() {
 
   const isFavorite = useFavorites((s) => s.isFavorite(id));
   const toggle = useFavorites((s) => s.toggle);
+  const addToCart = useCart((s) => s.add);
   const { selectedSize, setSelectedSize } = useOrderStore();
   const [localSize, setLocalSize] = useState<string | null>(null);
 
@@ -90,10 +92,26 @@ export function ProductDetailPage() {
     navigate(`/order/${product.id}`);
   };
 
+  const handleAddToCart = () => {
+    if (product.sizes && !size) {
+      push("Please select a size first");
+      return;
+    }
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      image: product.images[0],
+      unitPrice: finalPrice,
+      size,
+      stockQty: product.stockQty,
+    });
+    push("Added to cart — keep shopping", "success");
+  };
+
   return (
     <MobileShell nav={false}>
       {/* header */}
-      <header className="sticky top-0 z-30 flex items-center justify-between bg-surface/90 px-3 py-3 backdrop-blur">
+      <header className="glass-header sticky top-0 z-30 flex items-center justify-between px-3 py-3">
         <button
           type="button"
           aria-label="Go back"
@@ -212,10 +230,20 @@ export function ProductDetailPage() {
         </Button>
       </div>
 
-      {/* primary CTA */}
-      <div className="fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 border-t border-stone-200 bg-card/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
-        <Button size="lg" className="w-full" disabled={soldOut} onClick={orderNow}>
-          {soldOut ? "Sold Out" : "ORDER NOW"}
+      {/* primary CTA — floating glass bar echoing the nav pill */}
+      <div className="glass fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 gap-2 rounded-full p-2">
+        <Button
+          variant="outline"
+          size="lg"
+          className="flex-1 rounded-full border-white/60 bg-white/70"
+          disabled={soldOut}
+          onClick={handleAddToCart}
+        >
+          <ShoppingBag className="size-5" />
+          Add to Cart
+        </Button>
+        <Button size="lg" className="flex-1 rounded-full" disabled={soldOut} onClick={orderNow}>
+          {soldOut ? "Sold Out" : "Buy Now"}
           {!soldOut && <ArrowRight className="size-5" />}
         </Button>
       </div>

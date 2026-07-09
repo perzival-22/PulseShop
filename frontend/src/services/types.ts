@@ -1,4 +1,28 @@
-import type { Merchant, OrderDraft, PaymentResult, Product } from "@/types";
+import type { AuthUser, Merchant, OrderDraft, PaymentResult, Product } from "@/types";
+
+export interface Credentials {
+  email: string;
+  password: string;
+}
+
+export interface SignupInput {
+  shopName: string;
+  shopSlug: string;
+  email: string;
+  password: string;
+  city: string;
+  socials: { whatsapp: string; instagram: string; facebook: string };
+}
+
+/**
+ * Merchant auth. The mock accepts anything and fabricates a session; the real
+ * adapter (services/api/auth) wires these to Supabase Auth with the same shape.
+ */
+export interface AuthService {
+  login(creds: Credentials): Promise<AuthUser>;
+  signup(input: SignupInput): Promise<AuthUser>;
+  logout(): Promise<void>;
+}
 
 export interface ProductInput {
   name: string;
@@ -31,6 +55,7 @@ export interface PaymentService {
 }
 
 export interface Services {
+  auth: AuthService;
   products: ProductService;
   orders: OrderService;
   payments: PaymentService;
