@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, ChevronRight, Heart, Share2, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight, Heart, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { Gallery } from "@/components/product/Gallery";
 import { RatingRow } from "@/components/product/RatingRow";
+import { ShareMenu } from "@/components/product/ShareMenu";
 import { SizeSelector } from "@/components/product/SizeSelector";
 import { StockBadge, stockDetailLabel } from "@/components/product/StockBadge";
 import { Button } from "@/components/ui/Button";
-import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
+import { SocialLinks } from "@/components/shop/SocialLinks";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { discountedPrice, formatKes } from "@/lib/currency";
 import { productInquiryLinks } from "@/lib/deeplinks";
@@ -117,19 +118,6 @@ export function ProductDetailPage() {
   const soldOut = product.status === "out";
   const links = merchant ? productInquiryLinks(merchant, product) : null;
 
-  const share = async () => {
-    const data = { title: product.name, text: product.name, url: window.location.href };
-    try {
-      if (navigator.share) await navigator.share(data);
-      else {
-        await navigator.clipboard.writeText(window.location.href);
-        push("Link copied to clipboard", "success");
-      }
-    } catch {
-      /* user cancelled share */
-    }
-  };
-
   const orderNow = () => {
     if (product.sizes && !size) {
       push("Please select a size first");
@@ -188,14 +176,10 @@ export function ProductDetailPage() {
               className={cn("size-5", isFavorite ? "fill-favorite text-favorite" : "text-ink")}
             />
           </button>
-          <button
-            type="button"
-            aria-label="Share"
-            onClick={share}
-            className="flex size-10 items-center justify-center rounded-full bg-card shadow-soft"
-          >
-            <Share2 className="size-5" />
-          </button>
+          <ShareMenu
+            product={product}
+            triggerClassName="flex size-10 items-center justify-center rounded-full bg-card shadow-soft"
+          />
         </div>
       </header>
 
@@ -253,37 +237,11 @@ export function ProductDetailPage() {
           </div>
         )}
 
-        {/* contact icons row */}
-        {links && (
+        {/* contact icons row — only channels the seller actually set up */}
+        {links && links.length > 0 && (
           <div className="space-y-1.5 text-center">
             <div className="flex justify-center gap-4">
-              <a
-                href={links.whatsapp}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Ask on WhatsApp"
-                className="flex size-11 items-center justify-center rounded-full bg-whatsapp text-white shadow-soft transition-transform active:scale-90"
-              >
-                <WhatsAppIcon className="size-5" />
-              </a>
-              <a
-                href={links.instagram}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Ask on Instagram"
-                className="flex size-11 items-center justify-center rounded-full bg-instagram text-white shadow-soft transition-transform active:scale-90"
-              >
-                <InstagramIcon className="size-5" />
-              </a>
-              <a
-                href={links.facebook}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Ask on Facebook"
-                className="flex size-11 items-center justify-center rounded-full bg-facebook text-white shadow-soft transition-transform active:scale-90"
-              >
-                <FacebookIcon className="size-5" />
-              </a>
+              <SocialLinks links={links} ariaPrefix="Ask on" />
             </div>
             <p className="text-xs font-medium text-muted">Ask about this product</p>
           </div>

@@ -5,9 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { CATEGORY_GROUPS, categorySkuPrefix, isLegacyCategory } from "@/lib/constants";
+import { CATEGORY_GROUPS, categoryHasSizes, categorySkuPrefix, isLegacyCategory } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { services, type ProductInput } from "@/services";
 import type { Product } from "@/types";
@@ -152,7 +152,7 @@ export function ProductModal({
       discountPct: data.discountPct || null,
       stockQty,
       images,
-      sizes: sizes.length ? sizes : null,
+      sizes: categoryHasSizes(data.category) && sizes.length ? sizes : null,
       description: data.description ?? "",
     });
   });
@@ -231,6 +231,15 @@ export function ProductModal({
           <div className="col-span-2">
             <Input label="Product Name" placeholder="Classic White Tee" error={errors.name?.message} {...register("name")} />
           </div>
+          <div className="col-span-2">
+            <Textarea
+              label="Product Details"
+              placeholder="Key features, materials, what's included…"
+              rows={3}
+              error={errors.description?.message}
+              {...register("description")}
+            />
+          </div>
           <Input label="SKU" placeholder="TOP-001" error={errors.sku?.message} {...register("sku")} />
           <div className="flex flex-col gap-1.5">
             <label htmlFor="category" className="text-sm font-semibold text-ink">
@@ -279,43 +288,45 @@ export function ProductModal({
             {...register("discountPct")}
           />
 
-          {/* sizes tag input */}
-          <div className="col-span-2 flex flex-col gap-1.5">
-            <label htmlFor="size-input" className="text-sm font-semibold text-ink">
-              Sizes
-            </label>
-            <div className="flex flex-wrap items-center gap-2 rounded-btn border border-stone-200 bg-card p-2">
-              {sizes.map((s) => (
-                <span
-                  key={s}
-                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary"
-                >
-                  {s}
-                  <button
-                    type="button"
-                    aria-label={`Remove size ${s}`}
-                    onClick={() => setSizes((arr) => arr.filter((x) => x !== s))}
+          {/* sizes tag input — only meaningful for clothing/footwear categories */}
+          {categoryHasSizes(category) && (
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <label htmlFor="size-input" className="text-sm font-semibold text-ink">
+                Sizes
+              </label>
+              <div className="flex flex-wrap items-center gap-2 rounded-btn border border-stone-200 bg-card p-2">
+                {sizes.map((s) => (
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary"
                   >
-                    <X className="size-3" />
-                  </button>
-                </span>
-              ))}
-              <input
-                id="size-input"
-                value={sizeInput}
-                onChange={(e) => setSizeInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === ",") {
-                    e.preventDefault();
-                    addSize();
-                  }
-                }}
-                onBlur={addSize}
-                placeholder={sizes.length ? "" : "Type a size and press Enter (leave empty for none)"}
-                className="h-8 min-w-32 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted/60"
-              />
+                    {s}
+                    <button
+                      type="button"
+                      aria-label={`Remove size ${s}`}
+                      onClick={() => setSizes((arr) => arr.filter((x) => x !== s))}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  id="size-input"
+                  value={sizeInput}
+                  onChange={(e) => setSizeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      addSize();
+                    }
+                  }}
+                  onBlur={addSize}
+                  placeholder={sizes.length ? "" : "Type a size and press Enter (leave empty for none)"}
+                  className="h-8 min-w-32 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted/60"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* stock counter + DB sync indicator */}
           <div className="col-span-2 flex items-end justify-between gap-4 rounded-card bg-stone-50 p-4">

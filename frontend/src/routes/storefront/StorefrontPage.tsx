@@ -7,9 +7,9 @@ import { useShop } from "@/stores/shop";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { FollowButton } from "@/components/shop/FollowButton";
-import { WhatsAppIcon } from "@/components/ui/BrandIcons";
+import { SocialLinks } from "@/components/shop/SocialLinks";
 import { ProductCardSkeleton, Skeleton } from "@/components/ui/Skeleton";
-import { merchantChatLink } from "@/lib/deeplinks";
+import { merchantSocialLinks } from "@/lib/deeplinks";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
 
@@ -154,15 +154,7 @@ export function StorefrontPage() {
               {isPublic && session?.id !== merchant.id && (
                 <FollowButton merchantId={merchant.id} className="h-11 px-5" />
               )}
-              <a
-                href={merchantChatLink(merchant)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-whatsapp px-6 text-sm font-bold text-white shadow-soft transition-transform active:scale-95"
-              >
-                <WhatsAppIcon className="size-4.5" />
-                Chat on WhatsApp
-              </a>
+              <SocialLinks links={merchantSocialLinks(merchant)} ariaPrefix="Chat on" size="size-11" />
             </div>
           </div>
         ) : (

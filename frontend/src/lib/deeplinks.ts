@@ -2,16 +2,23 @@ import type { Merchant, Product } from "@/types";
 import type { OrderChannel } from "@/types";
 import { discountedPrice, formatKes } from "./currency";
 
-/** Pre-filled "ask about this product" message for the detail page contact icons. */
+/**
+ * Pre-filled "ask about this product" links for the detail page contact icons —
+ * only for channels the seller actually set up, so unconfigured ones don't
+ * render as dead buttons.
+ */
 export function productInquiryLinks(merchant: Merchant, product: Product) {
   const msg = `Hi ${merchant.name}! I'm interested in "${product.name}" (${product.sku}) — ${formatKes(
     discountedPrice(product.priceKes, product.discountPct),
   )}. Is it available?`;
-  return {
-    whatsapp: `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`,
-    instagram: `https://ig.me/m/${merchant.contacts.instagram}`,
-    facebook: `https://m.me/${merchant.contacts.facebook}`,
-  };
+  const links: { channel: OrderChannel; url: string }[] = [];
+  if (merchant.contacts.whatsapp)
+    links.push({ channel: "whatsapp", url: `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}` });
+  if (merchant.contacts.instagram)
+    links.push({ channel: "instagram", url: `https://ig.me/m/${merchant.contacts.instagram}` });
+  if (merchant.contacts.facebook)
+    links.push({ channel: "facebook", url: `https://m.me/${merchant.contacts.facebook}` });
+  return links;
 }
 
 /** Pre-filled order message for SEND ORDER. */
@@ -89,4 +96,38 @@ export function cartOrderLink(
 export function merchantChatLink(merchant: Merchant) {
   const msg = `Hi ${merchant.name}! 👋`;
   return `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`;
+}
+
+/**
+ * "Share this product" links — for promoting a product's own page (e.g. a
+ * seller posting their new listing), not for asking the seller a question.
+ * Facebook and WhatsApp both support a generic sharer URL that doesn't need
+ * anyone's contact details; Instagram has no web share endpoint at all, so
+ * callers fall back to copying `url` for the seller to paste into a bio/Story.
+ */
+export function productShareLinks(product: Product) {
+  const url = `${window.location.origin}/product/${product.id}`;
+  const caption = `Check out ${product.name} — ${formatKes(
+    discountedPrice(product.priceKes, product.discountPct),
+  )} on PulseShop!`;
+  return {
+    url,
+    caption,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(`${caption} ${url}`)}`,
+  };
+}
+
+/**
+ * Only the social links the seller actually set up, so the UI can render
+ * buttons for those and skip the rest entirely.
+ */
+export function merchantSocialLinks(merchant: Merchant) {
+  const links: { channel: OrderChannel; url: string }[] = [];
+  if (merchant.contacts.whatsapp) links.push({ channel: "whatsapp", url: merchantChatLink(merchant) });
+  if (merchant.contacts.instagram)
+    links.push({ channel: "instagram", url: `https://ig.me/m/${merchant.contacts.instagram}` });
+  if (merchant.contacts.facebook)
+    links.push({ channel: "facebook", url: `https://m.me/${merchant.contacts.facebook}` });
+  return links;
 }

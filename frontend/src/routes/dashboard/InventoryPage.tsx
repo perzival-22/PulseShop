@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { ShareMenu } from "@/components/product/ShareMenu";
 import { StockAdjuster } from "@/components/product/StockAdjuster";
 import { StockBadge } from "@/components/product/StockBadge";
 import { Button } from "@/components/ui/Button";
@@ -370,6 +371,11 @@ export function InventoryPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
+                      <ShareMenu
+                        product={p}
+                        triggerClassName="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+                        iconClassName="size-4"
+                      />
                       <button
                         type="button"
                         aria-label={`Edit ${p.name}`}
