@@ -85,7 +85,7 @@ export function OrderPage() {
       <MobileShell nav={false}>
         <div className="flex min-h-[60dvh] flex-col items-center justify-center gap-3 text-center">
           <p className="text-lg font-bold text-ink">Product not found</p>
-          <Link to="/" className="font-semibold text-primary">
+          <Link to="/shop" className="font-semibold text-primary">
             Back to store
           </Link>
         </div>

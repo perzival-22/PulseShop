@@ -48,7 +48,7 @@ export function FavoritesPage() {
               </p>
             </div>
             <Link
-              to="/"
+              to="/shop"
               className="rounded-btn bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-soft"
             >
               Browse products

@@ -47,8 +47,9 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<StorefrontPage />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/welcome" element={<LandingPage />} />
+          <Route path="/shop" element={<StorefrontPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />

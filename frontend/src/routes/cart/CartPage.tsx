@@ -24,7 +24,7 @@ export function CartPage() {
           </div>
           <p className="text-lg font-bold text-ink">Your cart is empty</p>
           <p className="text-sm text-muted">Add items while you browse, then check out all at once.</p>
-          <Link to="/" className="mt-1 font-semibold text-primary">
+          <Link to="/shop" className="mt-1 font-semibold text-primary">
             Browse products
           </Link>
         </div>

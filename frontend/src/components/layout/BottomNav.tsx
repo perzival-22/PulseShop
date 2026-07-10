@@ -5,7 +5,7 @@ import { useFavorites } from "@/stores/favorites";
 import { cartCount, useCart } from "@/stores/cart";
 
 const items = [
-  { to: "/", label: "Home", icon: Home },
+  { to: "/shop", label: "Home", icon: Home },
   { to: "/favorites", label: "Favorites", icon: Heart },
   { to: "/cart", label: "Cart", icon: ShoppingBag },
   { to: "/orders", label: "Orders", icon: Package },
@@ -27,7 +27,7 @@ export function BottomNav() {
             <NavLink
               key={to}
               to={to}
-              end={to === "/"}
+              end={to === "/shop"}
               aria-label={label}
               className={({ isActive }) =>
                 cn(

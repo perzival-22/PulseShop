@@ -12,21 +12,42 @@ import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
 import { AuthShell } from "./AuthShell";
 
-const schema = z.object({
-  shopName: z.string().min(2, "Give your shop a name"),
-  slug: z
-    .string()
-    .min(3, "At least 3 characters")
-    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only"),
-  email: z.string().email("Enter a valid email"),
-  password: z.string().min(6, "At least 6 characters"),
-  city: z.string().min(2, "Where are you based?"),
-  whatsapp: z
-    .string()
-    .regex(/^(\+?254|0)?[17]\d{8}$/, "Enter a valid Kenyan WhatsApp number"),
-  instagram: z.string().optional().default(""),
-  facebook: z.string().optional().default(""),
-});
+const schema = z
+  .object({
+    shopName: z.string().min(2, "Give your shop a name"),
+    slug: z
+      .string()
+      .min(3, "At least 3 characters")
+      .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and dashes only"),
+    email: z.string().email("Enter a valid email"),
+    password: z.string().min(6, "At least 6 characters"),
+    city: z.string().min(2, "Where are you based?"),
+    whatsapp: z.string().optional().default(""),
+    instagram: z.string().optional().default(""),
+    facebook: z.string().optional().default(""),
+  })
+  .superRefine((val, ctx) => {
+    const whatsapp = (val.whatsapp ?? "").trim();
+    const instagram = (val.instagram ?? "").trim();
+    const facebook = (val.facebook ?? "").trim();
+
+    // At least one contact is required so orders have somewhere to land.
+    if (!whatsapp && !instagram && !facebook) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["whatsapp"],
+        message: "Link at least one — WhatsApp, Instagram or Facebook",
+      });
+    }
+    // WhatsApp is optional, but must be a valid Kenyan number when provided.
+    if (whatsapp && !/^(\+?254|0)?[17]\d{8}$/.test(whatsapp)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["whatsapp"],
+        message: "Enter a valid Kenyan WhatsApp number",
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -147,7 +168,7 @@ export function SignupPage() {
         <div className="rounded-card border border-white/60 bg-white/50 p-4">
           <p className="text-sm font-bold text-ink">Link your socials</p>
           <p className="mb-3 mt-0.5 text-xs text-muted">
-            Orders are routed here. WhatsApp is required; the rest are optional.
+            Orders are routed here. Link at least one — all three are welcome.
           </p>
           <div className="space-y-3">
             <label className="flex items-center gap-2.5">

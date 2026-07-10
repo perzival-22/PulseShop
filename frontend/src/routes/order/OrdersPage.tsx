@@ -28,7 +28,7 @@ export function OrdersPage() {
               <p className="mt-1 text-sm text-muted">Your orders will show up here.</p>
             </div>
             <Link
-              to="/"
+              to="/shop"
               className="rounded-btn bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-soft"
             >
               Browse products

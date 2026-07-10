@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Package, Search, ShoppingBag, Star } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { ProductCard } from "@/components/product/ProductCard";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";
@@ -52,13 +51,6 @@ export function StorefrontPage() {
           >
             <Search className="size-5" />
           </button>
-          <Link
-            to="/orders"
-            aria-label="Orders"
-            className="flex size-10 items-center justify-center rounded-full text-ink hover:bg-stone-100"
-          >
-            <ShoppingBag className="size-5" />
-          </Link>
         </div>
       </header>
 
