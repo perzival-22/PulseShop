@@ -1,12 +1,33 @@
 import type { AuthUser, Merchant, OrderDraft, PaymentResult, Product } from "@/types";
-import type { Credentials, ProductInput, Services, SignupInput } from "../types";
+import type { Credentials, MerchantUpdate, ProductInput, Services, SignupInput } from "../types";
 import { statusForQty } from "@/lib/constants";
 import { MERCHANT, PRODUCTS } from "./data";
 
 const LATENCY = 300;
 const STORAGE_KEY = "pulseshop-mock-products";
+const MERCHANT_KEY = "pulseshop-mock-merchant";
 
 const delay = (ms = LATENCY) => new Promise((r) => setTimeout(r, ms));
+
+function loadMerchant(): Merchant {
+  try {
+    const raw = localStorage.getItem(MERCHANT_KEY);
+    if (raw) return { ...structuredClone(MERCHANT), ...JSON.parse(raw) } as Merchant;
+  } catch {
+    /* fall through to seed */
+  }
+  return structuredClone(MERCHANT);
+}
+
+function saveMerchant(m: Merchant) {
+  try {
+    localStorage.setItem(MERCHANT_KEY, JSON.stringify(m));
+  } catch {
+    /* storage full/unavailable — keep in-memory copy */
+  }
+}
+
+let merchant = loadMerchant();
 
 function loadProducts(): Product[] {
   try {
@@ -52,12 +73,32 @@ export const mockServices: Services = {
     async logout(): Promise<void> {
       await delay();
     },
+
+    async updateEmail(_email: string): Promise<void> {
+      await delay();
+    },
   },
 
   products: {
     async getMerchant(): Promise<Merchant> {
       await delay();
-      return { ...MERCHANT, stats: { ...MERCHANT.stats, products: products.length } };
+      return { ...structuredClone(merchant), stats: { ...merchant.stats, products: products.length } };
+    },
+
+    async updateMerchant(patch: MerchantUpdate): Promise<Merchant> {
+      await delay();
+      const { whatsapp, instagram, facebook, ...rest } = patch;
+      merchant = {
+        ...merchant,
+        ...rest,
+        contacts: {
+          whatsapp: whatsapp ?? merchant.contacts.whatsapp,
+          instagram: instagram ?? merchant.contacts.instagram,
+          facebook: facebook ?? merchant.contacts.facebook,
+        },
+      };
+      saveMerchant(merchant);
+      return { ...structuredClone(merchant), stats: { ...merchant.stats, products: products.length } };
     },
 
     async listProducts(): Promise<Product[]> {

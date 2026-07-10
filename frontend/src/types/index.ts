@@ -24,6 +24,7 @@ export interface Merchant {
   bio: string;
   location: string;
   avatarUrl: string;
+  bannerUrl: string;
   isOnline: boolean;
   stats: { products: number; orders: number; rating: number };
   contacts: { whatsapp: string; instagram: string; facebook: string };

@@ -1,13 +1,24 @@
 import type { Merchant, Product } from "@/types";
 import type { ProductInput, ProductService } from "../types";
 import { requireUserId, supabase } from "./client";
+import type { MerchantUpdate } from "../types";
 import {
   type MerchantRow,
   type ProductRow,
+  merchantUpdateToRow,
   productInputToRow,
   toMerchant,
   toProduct,
 } from "./mappers";
+
+/** Product + order counts for a merchant, used to populate Merchant.stats. */
+async function merchantStats(uid: string): Promise<{ products: number; orders: number }> {
+  const [{ count: products }, { count: orders }] = await Promise.all([
+    supabase.from("products").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
+    supabase.from("orders").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
+  ]);
+  return { products: products ?? 0, orders: orders ?? 0 };
+}
 
 /**
  * Product + merchant reads/writes scoped to the signed-in merchant. RLS also
@@ -25,12 +36,19 @@ export const productsApi: ProductService = {
       .single<MerchantRow>();
     if (error) throw error;
 
-    const [{ count: products }, { count: orders }] = await Promise.all([
-      supabase.from("products").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
-      supabase.from("orders").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
-    ]);
+    return toMerchant(merchant, await merchantStats(uid));
+  },
 
-    return toMerchant(merchant, { products: products ?? 0, orders: orders ?? 0 });
+  async updateMerchant(patch: MerchantUpdate): Promise<Merchant> {
+    const uid = await requireUserId();
+    const { data, error } = await supabase
+      .from("merchants")
+      .update(merchantUpdateToRow(patch))
+      .eq("id", uid)
+      .select("*")
+      .single<MerchantRow>();
+    if (error) throw error;
+    return toMerchant(data, await merchantStats(uid));
   },
 
   async listProducts(): Promise<Product[]> {

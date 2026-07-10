@@ -66,11 +66,18 @@ export function StorefrontPage() {
         </div>
       )}
 
+      {/* store banner */}
+      {merchant?.bannerUrl && (
+        <div className="h-28 w-full overflow-hidden">
+          <img src={merchant.bannerUrl} alt="" className="h-full w-full object-cover" />
+        </div>
+      )}
+
       {/* merchant hero */}
-      <section className="px-4 pt-5">
+      <section className={cn("px-4", merchant?.bannerUrl ? "pt-0" : "pt-5")}>
         {merchant ? (
           <div className="flex flex-col items-center text-center">
-            <div className="relative">
+            <div className={cn("relative", merchant.bannerUrl && "-mt-10")}>
               <img
                 src={merchant.avatarUrl}
                 alt={merchant.name}

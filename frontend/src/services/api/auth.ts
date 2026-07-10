@@ -59,4 +59,9 @@ export const authApi: AuthService = {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
+
+  async updateEmail(email: string): Promise<void> {
+    const { error } = await supabase.auth.updateUser({ email });
+    if (error) throw error;
+  },
 };

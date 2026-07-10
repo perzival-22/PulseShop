@@ -22,6 +22,22 @@ export interface AuthService {
   login(creds: Credentials): Promise<AuthUser>;
   signup(input: SignupInput): Promise<AuthUser>;
   logout(): Promise<void>;
+  /** Change the signed-in merchant's account email. */
+  updateEmail(email: string): Promise<void>;
+}
+
+/** Editable merchant/shop profile fields. All optional — patch semantics. */
+export interface MerchantUpdate {
+  name?: string;
+  handle?: string;
+  bio?: string;
+  location?: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  isOnline?: boolean;
+  whatsapp?: string;
+  instagram?: string;
+  facebook?: string;
 }
 
 export interface ProductInput {
@@ -38,6 +54,7 @@ export interface ProductInput {
 
 export interface ProductService {
   getMerchant(): Promise<Merchant>;
+  updateMerchant(patch: MerchantUpdate): Promise<Merchant>;
   listProducts(): Promise<Product[]>;
   getProduct(id: string): Promise<Product | null>;
   createProduct(input: ProductInput): Promise<Product>;

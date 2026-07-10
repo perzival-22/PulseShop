@@ -10,6 +10,7 @@ export const MERCHANT: Merchant = {
   bio: "Curated fashion for every vibe ✨ Nairobi-based, countrywide delivery in 1–3 days.",
   location: "Nairobi, KE",
   avatarUrl: img("photo-1494790108377-be9c29b29330"),
+  bannerUrl: img("photo-1441984904996-e0b6ba687e04"),
   isOnline: true,
   stats: { products: 12, orders: 348, rating: 4.8 },
   contacts: {

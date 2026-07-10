@@ -9,4 +9,4 @@ import { mockServices } from "./mock";
 import type { Services } from "./types";
 
 export const services: Services = isSupabaseConfigured ? apiServices : mockServices;
-export type { Credentials, ProductInput, Services, SignupInput } from "./types";
+export type { Credentials, MerchantUpdate, ProductInput, Services, SignupInput } from "./types";

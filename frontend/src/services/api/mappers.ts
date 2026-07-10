@@ -1,5 +1,5 @@
 import type { Merchant, Product, StockStatus } from "@/types";
-import type { ProductInput } from "../types";
+import type { MerchantUpdate, ProductInput } from "../types";
 
 /** A row from the `products` table (snake_case). */
 export interface ProductRow {
@@ -28,6 +28,7 @@ export interface MerchantRow {
   bio: string | null;
   location: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   is_online: boolean;
   whatsapp: string | null;
   instagram: string | null;
@@ -69,6 +70,7 @@ export function toMerchant(
     bio: row.bio ?? "",
     location: row.location ?? "",
     avatarUrl: row.avatar_url || avatarFor(row.name),
+    bannerUrl: row.banner_url ?? "",
     isOnline: row.is_online,
     stats: { products: stats.products, orders: stats.orders, rating: Number(row.rating) },
     contacts: {
@@ -91,5 +93,21 @@ export function productInputToRow(patch: Partial<ProductInput>): Record<string, 
   if (patch.images !== undefined) row.images = patch.images;
   if (patch.sizes !== undefined) row.sizes = patch.sizes;
   if (patch.description !== undefined) row.description = patch.description;
+  return row;
+}
+
+/** MerchantUpdate (camelCase) -> writable columns on the `merchants` table. */
+export function merchantUpdateToRow(patch: MerchantUpdate): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.handle !== undefined) row.handle = patch.handle;
+  if (patch.bio !== undefined) row.bio = patch.bio;
+  if (patch.location !== undefined) row.location = patch.location;
+  if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
+  if (patch.bannerUrl !== undefined) row.banner_url = patch.bannerUrl;
+  if (patch.isOnline !== undefined) row.is_online = patch.isOnline;
+  if (patch.whatsapp !== undefined) row.whatsapp = patch.whatsapp;
+  if (patch.instagram !== undefined) row.instagram = patch.instagram;
+  if (patch.facebook !== undefined) row.facebook = patch.facebook;
   return row;
 }
