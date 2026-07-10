@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Minus, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, Minus, Pencil, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router";
@@ -67,10 +67,15 @@ export function OrderPage() {
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [payOpen, setPayOpen] = useState(false);
   const [pendingReference, setPendingReference] = useState<string | null>(null);
+  const [pendingNotify, setPendingNotify] = useState<{
+    channel: Channel;
+    label: string;
+    url: string;
+    message: string;
+  } | null>(null);
 
   const {
     register,
-    handleSubmit,
     getValues,
     trigger,
     formState: { errors },
@@ -81,6 +86,15 @@ export function OrderPage() {
   });
 
   const merchant = merchantQ.data;
+
+  // Default to the seller's first configured channel — the buyer can only
+  // pick among channels the seller actually set up (see the disabled state
+  // in the selector below).
+  useEffect(() => {
+    if (!merchant || merchant.contacts[channel]) return;
+    const firstAvailable = channels.find((c) => merchant.contacts[c.id]);
+    if (firstAvailable) setChannel(firstAvailable.id);
+  }, [merchant, channel]);
 
   // A qty carried over from a previous product (via the persisted order
   // store) can exceed this product's stock — the +/- buttons only clamped
@@ -148,43 +162,6 @@ export function OrderPage() {
       payment: null,
     });
 
-  const sendOrder = handleSubmit(async (data) => {
-    saveCustomer({ name: data.name, phone: data.phone, notes: data.notes ?? "" });
-
-    // Open the tab synchronously (inside the click gesture) so the browser
-    // doesn't treat it as a popup once we come back from the await below.
-    const win = window.open("", "_blank", "noopener");
-
-    let reference: string;
-    try {
-      ({ reference } = await createOrder(data, channel));
-    } catch {
-      win?.close();
-      push("Couldn't send your order — check your connection and try again", "danger");
-      return;
-    }
-
-    const { url, message } = orderLink(
-      merchant,
-      product,
-      { size: selectedSize, qty, name: data.name, phone: data.phone, notes: data.notes ?? "" },
-      channel,
-      reference,
-    );
-
-    if (channel === "instagram" || channel === "facebook") {
-      // ig.me/m.me never accept a prefilled message — hand it over via clipboard.
-      await navigator.clipboard?.writeText(message).catch(() => {});
-      push(`Order details copied — paste them into the ${CHANNEL_LABEL[channel]} chat`, "success");
-    } else {
-      push(`Order sent via ${CHANNEL_LABEL[channel]}`, "success");
-    }
-    if (win) win.location.href = url;
-    else window.open(url, "_blank", "noopener");
-
-    recordOrder(reference, null, channel);
-  });
-
   const openPayment = async () => {
     const valid = await trigger();
     if (!valid) {
@@ -196,6 +173,17 @@ export function OrderPage() {
     try {
       const { reference } = await createOrder(data, "direct");
       setPendingReference(reference);
+      // Pre-build the seller notification for the chosen channel now, while
+      // we still have the reference — PaymentSheet fires it automatically
+      // once payment succeeds, so there's no separate "send order" step.
+      const { url, message } = orderLink(
+        merchant,
+        product,
+        { size: selectedSize, qty, name: data.name, phone: data.phone, notes: data.notes ?? "" },
+        channel,
+        reference,
+      );
+      setPendingNotify({ channel, label: CHANNEL_LABEL[channel], url, message });
       setPayOpen(true);
     } catch {
       push("Couldn't start checkout — check your connection and try again", "danger");
@@ -267,7 +255,7 @@ export function OrderPage() {
         </div>
 
         {/* customer fields */}
-        <form className="space-y-3 rounded-card bg-card p-4 shadow-soft" onSubmit={sendOrder}>
+        <div className="space-y-3 rounded-card bg-card p-4 shadow-soft">
           <h2 className="text-sm font-bold text-ink">Your details</h2>
           <Input
             label="Full Name"
@@ -288,48 +276,45 @@ export function OrderPage() {
             error={errors.notes?.message}
             {...register("notes")}
           />
-        </form>
-
-        {/* channel selector + context notice */}
-        <div className="space-y-3 rounded-card bg-card p-4 shadow-soft">
-          <div className="grid grid-cols-3 gap-2 rounded-btn bg-stone-100 p-1">
-            {channels.map(({ id: ch, label, icon: Icon }) => (
-              <button
-                key={ch}
-                type="button"
-                onClick={() => setChannel(ch)}
-                className={cn(
-                  "flex h-10 items-center justify-center gap-1.5 rounded-[10px] text-xs font-bold transition-all",
-                  channel === ch ? "bg-card text-ink shadow-soft" : "text-muted",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "size-4",
-                    ch === "whatsapp" && "text-whatsapp",
-                    ch === "instagram" && "text-instagram",
-                    ch === "facebook" && "text-facebook",
-                  )}
-                />
-                {label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs leading-relaxed text-muted">
-            Your order will be sent to <span className="font-bold text-ink">{merchant.name}</span>{" "}
-            via <span className="font-bold text-ink capitalize">{channel}</span>. They'll confirm
-            stock and delivery.
-          </p>
         </div>
 
-        <Button size="lg" className="w-full" onClick={sendOrder}>
-          SEND ORDER <ArrowRight className="size-5" />
-        </Button>
-
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-stone-200" />
-          <span className="text-xs font-semibold text-muted">or pay now</span>
-          <div className="h-px flex-1 bg-stone-200" />
+        {/* channel selector + context notice — only channels the seller set up are pickable */}
+        <div className="space-y-3 rounded-card bg-card p-4 shadow-soft">
+          <div className="grid grid-cols-3 gap-2 rounded-btn bg-stone-100 p-1">
+            {channels.map(({ id: ch, label, icon: Icon }) => {
+              const available = Boolean(merchant.contacts[ch]);
+              return (
+                <button
+                  key={ch}
+                  type="button"
+                  onClick={() => available && setChannel(ch)}
+                  disabled={!available}
+                  aria-label={available ? label : `${label} — not set up by this seller`}
+                  className={cn(
+                    "flex h-10 items-center justify-center gap-1.5 rounded-[10px] text-xs font-bold transition-all",
+                    !available && "cursor-not-allowed opacity-35",
+                    available && channel === ch ? "bg-card text-ink shadow-soft" : "text-muted",
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "size-4",
+                      available && ch === "whatsapp" && "text-whatsapp",
+                      available && ch === "instagram" && "text-instagram",
+                      available && ch === "facebook" && "text-facebook",
+                    )}
+                  />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs leading-relaxed text-muted">
+            Once you pay, your order will be sent to{" "}
+            <span className="font-bold text-ink">{merchant.name}</span> via{" "}
+            <span className="font-bold text-ink capitalize">{channel}</span>. They'll confirm
+            stock and delivery.
+          </p>
         </div>
 
         <Button variant="dark" size="lg" className="w-full" onClick={openPayment}>
@@ -343,11 +328,11 @@ export function OrderPage() {
         amount={total}
         defaultPhone={getValues("phone") || customer.phone}
         merchantName={merchant.name}
-        merchantWhatsApp={merchant.contacts.whatsapp}
         orderReference={pendingReference ?? ""}
+        notify={pendingNotify}
         onPaid={(method) => {
           if (!pendingReference) return;
-          recordOrder(pendingReference, method, "direct");
+          recordOrder(pendingReference, method, channel);
         }}
       />
     </MobileShell>

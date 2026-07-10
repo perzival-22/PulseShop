@@ -1,12 +1,13 @@
 import { Check, Loader2, Phone, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { PayPalIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
+import { FacebookIcon, InstagramIcon, PayPalIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Sheet } from "@/components/ui/Modal";
 import { formatKes } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
+import { useToasts } from "@/stores/toast";
 import type { PaymentMethod } from "@/types";
 
 type Stage =
@@ -17,14 +18,23 @@ type Stage =
   | { step: "success"; method: PaymentMethod }
   | { step: "failed"; method: PaymentMethod };
 
+type NotifyChannel = "whatsapp" | "instagram" | "facebook";
+type Notify = { channel: NotifyChannel; label: string; url: string; message: string };
+
+const CHANNEL_ICON: Record<NotifyChannel, typeof WhatsAppIcon> = {
+  whatsapp: WhatsAppIcon,
+  instagram: InstagramIcon,
+  facebook: FacebookIcon,
+};
+
 export function PaymentSheet({
   open,
   onOpenChange,
   amount,
   defaultPhone,
   merchantName,
-  merchantWhatsApp,
   orderReference,
+  notify,
   onPaid,
 }: {
   open: boolean;
@@ -32,11 +42,14 @@ export function PaymentSheet({
   amount: number;
   defaultPhone: string;
   merchantName: string;
-  merchantWhatsApp: string;
   /** The order this payment is for — already created (pending) before the sheet opens. */
   orderReference: string;
+  /** Seller notification to fire the moment payment succeeds — built from the
+   * channel the buyer picked in checkout (whichever the seller has set up). */
+  notify: Notify | null;
   onPaid: (method: PaymentMethod) => void;
 }) {
+  const push = useToasts((s) => s.push);
   const [stage, setStage] = useState<Stage>({ step: "choose" });
   const [method, setMethod] = useState<PaymentMethod>("mpesa");
   const [phone, setPhone] = useState(defaultPhone);
@@ -51,32 +64,56 @@ export function PaymentSheet({
     if (!next) setStage({ step: "choose" });
   };
 
+  // Fired once payment succeeds — opens (or copies, for IG/FB) the seller
+  // notification. `win` is a tab opened synchronously inside the triggering
+  // click, before the payment await, so the browser doesn't block it as a
+  // popup once we redirect it here.
+  const dispatchNotify = async (win: Window | null) => {
+    if (!notify) return;
+    if (notify.channel !== "whatsapp") {
+      await navigator.clipboard?.writeText(notify.message).catch(() => {});
+      push(`Order details copied — paste them into the ${notify.label} chat`, "success");
+    } else {
+      push(`Order sent to the seller via ${notify.label}`, "success");
+    }
+    if (win) win.location.href = notify.url;
+    else window.open(notify.url, "_blank", "noopener");
+  };
+
   const startMpesa = async () => {
+    const win = notify ? window.open("", "_blank", "noopener") : null;
     setStage({ step: "pending", method: "mpesa" });
     try {
       const result = await services.payments.payWithMpesa(phone, amount);
       if (result.status === "paid") {
         setStage({ step: "success", method: "mpesa" });
         onPaid("mpesa");
+        await dispatchNotify(win);
       } else {
+        win?.close();
         setStage({ step: "failed", method: "mpesa" });
       }
     } catch {
+      win?.close();
       setStage({ step: "failed", method: "mpesa" });
     }
   };
 
   const startPaypal = async () => {
+    const win = notify ? window.open("", "_blank", "noopener") : null;
     setStage({ step: "pending", method: "paypal" });
     try {
       const result = await services.payments.payWithPaypal(amount);
       if (result.status === "paid") {
         setStage({ step: "success", method: "paypal" });
         onPaid("paypal");
+        await dispatchNotify(win);
       } else {
+        win?.close();
         setStage({ step: "failed", method: "paypal" });
       }
     } catch {
+      win?.close();
       setStage({ step: "failed", method: "paypal" });
     }
   };
@@ -196,17 +233,24 @@ export function PaymentSheet({
               <span className="font-mono font-bold text-ink">{orderReference}</span>
             </p>
           </div>
-          <a
-            href={`https://wa.me/${merchantWhatsApp}?text=${encodeURIComponent(
-              `Hi! I just paid for my order ${orderReference}. Please confirm delivery details.`,
-            )}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-bold text-whatsapp"
-          >
-            <WhatsAppIcon className="size-4" />
-            Track via WhatsApp
-          </a>
+          {notify && (
+            <button
+              type="button"
+              onClick={() => dispatchNotify(null)}
+              className={cn(
+                "inline-flex items-center gap-2 text-sm font-bold",
+                notify.channel === "whatsapp" && "text-whatsapp",
+                notify.channel === "instagram" && "text-instagram",
+                notify.channel === "facebook" && "text-facebook",
+              )}
+            >
+              {(() => {
+                const Icon = CHANNEL_ICON[notify.channel];
+                return <Icon className="size-4" />;
+              })()}
+              Didn't open? Message the seller via {notify.label}
+            </button>
+          )}
           <Button variant="dark" className="w-full" onClick={() => reset(false)}>
             Done
           </Button>
