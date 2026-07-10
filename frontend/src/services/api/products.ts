@@ -21,16 +21,27 @@ import {
  */
 export async function merchantStats(
   uid: string,
-): Promise<{ products: number; orders: number; followers: number }> {
-  const [{ count: products }, { data: orders }, { data: followers }] = await Promise.all([
-    supabase.from("products").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
-    supabase.rpc("merchant_order_count", { p_merchant_id: uid }),
-    supabase.rpc("merchant_follower_count", { p_merchant_id: uid }),
-  ]);
+): Promise<{ products: number; orders: number; followers: number; rating: number }> {
+  const [{ count: products }, { data: orders }, { data: followers }, { data: ratingRows }] =
+    await Promise.all([
+      supabase.from("products").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
+      supabase.rpc("merchant_order_count", { p_merchant_id: uid }),
+      supabase.rpc("merchant_follower_count", { p_merchant_id: uid }),
+      supabase.from("products").select("rating, review_count").eq("merchant_id", uid),
+    ]);
+
+  const rows = ratingRows ?? [];
+  const totalReviews = rows.reduce((sum, r) => sum + (r.review_count ?? 0), 0);
+  const rating =
+    totalReviews === 0
+      ? 0
+      : rows.reduce((sum, r) => sum + Number(r.rating) * (r.review_count ?? 0), 0) / totalReviews;
+
   return {
     products: products ?? 0,
     orders: Number(orders ?? 0),
     followers: Number(followers ?? 0),
+    rating,
   };
 }
 

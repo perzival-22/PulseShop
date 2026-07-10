@@ -146,8 +146,8 @@ export function StorefrontPage() {
             <div className="mt-4 flex w-full max-w-xs justify-between rounded-card bg-card px-6 py-3 shadow-soft">
               <Stat icon={<Package className="size-4 text-primary" />} value={merchant.stats.products} label="Products" />
               <Stat icon={<ShoppingBag className="size-4 text-primary" />} value={merchant.stats.orders} label="Orders" />
-              <Stat icon={<Star className="size-4 fill-amber-400 text-amber-400" />} value={merchant.stats.rating} label="Rating" />
-            </div>
+              <Stat icon={<Star className="size-4 fill-amber-400 text-amber-400" />} value={merchant.stats.rating.toFixed(1)} label="Rating" />
+              </div>
 
             <div className="mt-4 flex items-center gap-2">
               {/* follow only makes sense on someone else's shop */}
@@ -230,7 +230,7 @@ export function StorefrontPage() {
   );
 }
 
-function Stat({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
+function Stat({ icon, value, label }: { icon: React.ReactNode; value: number | string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
       <div className="flex items-center gap-1">

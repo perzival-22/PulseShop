@@ -62,7 +62,7 @@ export function toProduct(row: ProductRow): Product {
 
 export function toMerchant(
   row: MerchantRow,
-  stats: { products: number; orders: number; followers: number },
+  stats: { products: number; orders: number; followers: number; rating: number },
 ): Merchant {
   return {
     id: row.id,
@@ -77,7 +77,7 @@ export function toMerchant(
       products: stats.products,
       orders: stats.orders,
       followers: stats.followers,
-      rating: Number(row.rating),
+      rating: stats.rating,
     },
     contacts: {
       whatsapp: row.whatsapp ? toWhatsAppDigits(row.whatsapp) : "",
