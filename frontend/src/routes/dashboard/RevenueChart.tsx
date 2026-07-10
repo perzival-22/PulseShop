@@ -45,9 +45,7 @@ export function RevenueChart({ data = mockData }) {
             tickFormatter={(value) => `Ksh ${value}`}
           />
           <Tooltip 
-            formatter={(value: number) => [`Ksh ${value}`, "Revenue"]}
-            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-            labelStyle={{ color: '#374151', fontWeight: 'bold' }}
+          formatter={(value: any) => [`Ksh ${value ?? ''}`, 'Revenue']}
           />
           <Area
             type="monotone"

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, ArrowLeft, Loader2, Check, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Check, Image as ImageIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router";
