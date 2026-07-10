@@ -30,6 +30,7 @@ import { OrderPage } from "@/routes/order/OrderPage";
 import { OrdersPage } from "@/routes/order/OrdersPage";
 import { ProductDetailPage } from "@/routes/product/ProductDetailPage";
 import { StorefrontPage } from "@/routes/storefront/StorefrontPage";
+import { RequireMerchant } from "./routes/auth/RequireAuth";
 
 registerSW({ immediate: true });
 
@@ -65,11 +66,11 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order/:id" element={<OrderPage />} />
           <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/dashboard" element={<DashboardOverviewPage />} />
-          <Route path="/dashboard/inventory" element={<InventoryPage />} />
-          <Route path="/dashboard/orders" element={<OrdersDashboardPage />} />
-          <Route path="/dashboard/analytics" element={<AnalyticsPage />} />
-          <Route path="/dashboard/settings" element={<SettingsPage />} />
+          <Route path="/dashboard" element={<RequireMerchant><DashboardOverviewPage /></RequireMerchant>} />
+          <Route path="/dashboard/inventory" element={<RequireMerchant><InventoryPage /></RequireMerchant>} />
+          <Route path="/dashboard/orders" element={<RequireMerchant><OrdersDashboardPage /></RequireMerchant>} />
+          <Route path="/dashboard/analytics" element={<RequireMerchant><AnalyticsPage /></RequireMerchant>} />
+          <Route path="/dashboard/settings" element={<RequireMerchant><SettingsPage /></RequireMerchant>} />
           <Route path="/dev/components" element={<ComponentsPage />} />
           {/* public shop by slug — keep LAST so static routes match first */}
           <Route path="/:shopSlug" element={<StorefrontPage />} />
