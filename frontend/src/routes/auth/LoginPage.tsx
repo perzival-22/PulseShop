@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { Loader2, ShoppingBag, Store } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
@@ -31,6 +31,9 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
   const [resetting, setResetting] = useState(false);
+  // Which button was pressed — drives the per-button spinner. The account's
+  // real type still governs where we land; a mismatch just gets a short note.
+  const [pendingRole, setPendingRole] = useState<"shopper" | "merchant" | null>(null);
 
   const onForgotPassword = async () => {
     const email = getValues("email")?.trim();
@@ -49,40 +52,64 @@ export function LoginPage() {
     }
   };
 
-  const onSubmit = handleSubmit(async (data) => {
-    try {
-      const user = await services.auth.login(data);
-      setSession(user);
-      if (user.accountType === "merchant") {
-        push(`Welcome back to ${user.shopName}`, "success");
-        navigate("/dashboard/inventory");
-      } else {
-        push("Welcome back", "success");
-        navigate("/shops");
+  // Both buttons share this. `intended` is the role the user pressed; the
+  // account's actual type wins for routing (a shopper can't reach the seller
+  // dashboard — RequireMerchant would bounce them anyway), and we explain the
+  // difference when the two don't match instead of silently redirecting.
+  const submitAs = (intended: "shopper" | "merchant") =>
+    handleSubmit(async (data) => {
+      setPendingRole(intended);
+      try {
+        const user = await services.auth.login(data);
+        setSession(user);
+        if (user.accountType === "merchant") {
+          push(
+            intended === "shopper"
+              ? `That's a seller account — taking you to ${user.shopName}`
+              : `Welcome back to ${user.shopName}`,
+            "success",
+          );
+          navigate("/dashboard/inventory");
+        } else {
+          push(
+            intended === "merchant"
+              ? "That's a shopper account — taking you to your shops"
+              : "Welcome back",
+            "success",
+          );
+          navigate("/shops");
+        }
+      } catch (err) {
+        if (err instanceof Error && /email not confirmed/i.test(err.message)) {
+          push("Please confirm your email first — check your inbox", "danger");
+          return;
+        }
+        push("Couldn't sign you in. Check your details and try again.", "danger");
+      } finally {
+        setPendingRole(null);
       }
-    } catch (err) {
-      if (err instanceof Error && /email not confirmed/i.test(err.message)) {
-        push("Please confirm your email first — check your inbox", "danger");
-        return;
-      }
-      push("Couldn't sign you in. Check your details and try again.", "danger");
-    }
-  });
+    });
 
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to your shop HQ."
+      subtitle="Sign in as a buyer or a seller."
       footer={
         <>
           New to PulseShop?{" "}
+          <Link to="/signup/shopper" className="font-bold text-primary">
+            Sign up to shop
+          </Link>{" "}
+          ·{" "}
           <Link to="/signup" className="font-bold text-primary">
-            Create your shop
+            Create a shop
           </Link>
         </>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
+      {/* Enter in a field submits as buyer (the broader audience); the two
+          explicit buttons cover both roles. */}
+      <form onSubmit={submitAs("shopper")} className="space-y-4">
         <Input
           label="Email"
           type="email"
@@ -112,10 +139,36 @@ export function LoginPage() {
             </button>
           </div>
         </div>
-        <Button type="submit" size="lg" className="w-full rounded-full" disabled={isSubmitting}>
-          {isSubmitting ? <Loader2 className="size-5 animate-spin" /> : <ArrowRight className="size-5" />}
-          Sign in
-        </Button>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            type="submit"
+            variant="outline"
+            size="lg"
+            className="rounded-full px-2 text-sm"
+            disabled={isSubmitting}
+          >
+            {pendingRole === "shopper" ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <ShoppingBag className="size-4" />
+            )}
+            Sign in as Buyer
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            className="rounded-full px-2 text-sm"
+            onClick={submitAs("merchant")}
+            disabled={isSubmitting}
+          >
+            {pendingRole === "merchant" ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Store className="size-4" />
+            )}
+            Sign in as Seller
+          </Button>
+        </div>
       </form>
       <div className="my-4 flex items-center gap-3 text-xs font-semibold text-muted">
         <div className="h-px flex-1 bg-white/60" />

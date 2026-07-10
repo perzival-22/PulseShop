@@ -108,6 +108,16 @@
   }
 }
 
+html {
+  /* Reserve the scrollbar gutter at all times so pages that scroll and pages
+     that don't keep the same content width — otherwise the centered mobile
+     column jumps sideways by the scrollbar's width whenever you navigate to a
+     taller/shorter page or open a dialog (the "moves when a button is
+     clicked" shift). No-op on mobile overlay scrollbars, stabilizing on
+     desktop/emulated classic ones. */
+  scrollbar-gutter: stable;
+}
+
 html,
 body {
   background: var(--color-surface);
