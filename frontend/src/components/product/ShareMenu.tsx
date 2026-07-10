@@ -1,19 +1,24 @@
 import * as Popover from "@radix-ui/react-popover";
-import { Share2 } from "lucide-react";
-import { useState } from "react";
+import { CircleHelp, ImageDown, Loader2, Share2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { FacebookIcon, WhatsAppIcon, InstagramIcon } from "@/components/ui/BrandIcons";
 import { productShareLinks } from "@/lib/deeplinks";
+import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
 import type { Product } from "@/types";
+import { InstagramStoryTemplate } from "./InstagramStoryTemplate";
+import { InstagramStoryTutorialModal } from "./InstagramStoryTutorialModal";
 
 /**
  * Share-this-product control. Where the native Web Share sheet is available
- * (most mobile browsers) tapping it opens that directly — one tap surfaces
- * every app the seller has installed, Instagram included, so there's nothing
- * better to build. Where it isn't (desktop) we fall back to explicit
- * Facebook/WhatsApp share links plus a copy-link action, since Instagram has
- * no web share endpoint — sellers paste the copied link into their bio or a
- * Story themselves.
+ * (most mobile browsers) it's offered as the first, fastest option — one tap
+ * surfaces every app the seller has installed. Instagram has no web share
+ * endpoint of its own though, so the menu also offers an Instagram Story
+ * generator: Meta blocks third-party apps from placing the link sticker
+ * automatically, so the best we can do is hand the seller a ready-made 9:16
+ * graphic with the product link already on their clipboard, and let them
+ * paste it onto the Story themselves in the Instagram app.
  */
 export function ShareMenu({
   product,
@@ -25,8 +30,14 @@ export function ShareMenu({
   iconClassName?: string;
 }) {
   const push = useToasts((s) => s.push);
+  const shopName = useAuth((s) => s.session?.shopName) || "Our shop";
   const [open, setOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [storyProduct, setStoryProduct] = useState<Product | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const templateRef = useRef<HTMLDivElement>(null);
   const links = productShareLinks(product);
+  const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(links.url);
@@ -34,64 +45,143 @@ export function ShareMenu({
     setOpen(false);
   };
 
-  if (typeof navigator !== "undefined" && navigator.share) {
-    const nativeShare = async () => {
+  const nativeShare = async () => {
+    setOpen(false);
+    try {
+      await navigator.share({ title: product.name, text: links.caption, url: links.url });
+    } catch {
+      /* user cancelled */
+    }
+  };
+
+  const generateStory = async () => {
+    setOpen(false);
+    setGenerating(true);
+    try {
+      // Mount the hidden 1080x1920 template synchronously so templateRef is
+      // populated before html2canvas reads it — a normal setState wouldn't
+      // commit in time inside this async handler.
+      flushSync(() => setStoryProduct(product));
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(templateRef.current!, {
+        width: 1080,
+        height: 1920,
+        useCORS: true,
+        backgroundColor: "#fafaf9",
+      });
+      const fileSlug = product.sku.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      const image = document.createElement("a");
+      image.href = canvas.toDataURL("image/png");
+      image.download = `${fileSlug}-instagram-story.png`;
+      image.click();
+
+      // The image is already downloaded at this point — a clipboard failure
+      // (permission denied, insecure context) shouldn't read as a total
+      // failure, just a smaller ask to paste the link manually.
+      let linkCopied = true;
       try {
-        await navigator.share({ title: product.name, text: links.caption, url: links.url });
+        await navigator.clipboard.writeText(links.url);
       } catch {
-        /* user cancelled */
+        linkCopied = false;
       }
-    };
-    return (
-      <button type="button" aria-label="Share this product" onClick={nativeShare} className={triggerClassName}>
-        <Share2 className={iconClassName} />
-      </button>
-    );
-  }
+
+      push(
+        linkCopied
+          ? "Story image downloaded and link copied — open Instagram Stories, add the image, then use the Link sticker to paste it in."
+          : `Story image downloaded. Copy your link — ${links.url} — then paste it with the Link sticker in Instagram Stories.`,
+        "success",
+      );
+    } catch {
+      push("Couldn't generate the Story image — try again.", "danger");
+    } finally {
+      setGenerating(false);
+      setStoryProduct(null);
+    }
+  };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        <button type="button" aria-label="Share this product" className={triggerClassName}>
-          <Share2 className={iconClassName} />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          sideOffset={8}
-          align="end"
-          className="z-50 w-60 rounded-card border border-stone-100 bg-card p-1.5 shadow-modal animate-modal-in"
-        >
-          <a
-            href={links.facebook}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:bg-stone-50"
-          >
-            <FacebookIcon className="size-4 text-facebook" />
-            Share to Facebook
-          </a>
-          <a
-            href={links.whatsapp}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:bg-stone-50"
-          >
-            <WhatsAppIcon className="size-4 text-whatsapp" />
-            Share to WhatsApp
-          </a>
+    <>
+      {storyProduct && <InstagramStoryTemplate ref={templateRef} product={storyProduct} shopName={shopName} />}
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Trigger asChild>
           <button
             type="button"
-            onClick={copyLink}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-ink hover:bg-stone-50"
+            aria-label="Share this product"
+            disabled={generating}
+            className={triggerClassName}
           >
-            <InstagramIcon className="size-4 text-instagram" />
-            Copy link for Instagram
+            {generating ? <Loader2 className={`${iconClassName} animate-spin`} /> : <Share2 className={iconClassName} />}
           </button>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            sideOffset={8}
+            align="end"
+            className="z-50 w-64 rounded-card border border-stone-100 bg-card p-1.5 shadow-modal animate-modal-in"
+          >
+            {canNativeShare && (
+              <button
+                type="button"
+                onClick={nativeShare}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-ink hover:bg-stone-50"
+              >
+                <Share2 className="size-4 text-muted" />
+                Share...
+              </button>
+            )}
+            <div className="flex items-center rounded-lg hover:bg-stone-50">
+              <button
+                type="button"
+                onClick={generateStory}
+                className="flex flex-1 items-center gap-2.5 px-3 py-2 text-left text-sm font-semibold text-ink"
+              >
+                <ImageDown className="size-4 text-instagram" />
+                Generate Instagram Story
+              </button>
+              <button
+                type="button"
+                aria-label="How to post this to your Instagram Story"
+                onClick={() => {
+                  setOpen(false);
+                  setTutorialOpen(true);
+                }}
+                className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-stone-100 hover:text-ink"
+              >
+                <CircleHelp className="size-4" />
+              </button>
+            </div>
+            <a
+              href={links.facebook}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:bg-stone-50"
+            >
+              <FacebookIcon className="size-4 text-facebook" />
+              Share to Facebook
+            </a>
+            <a
+              href={links.whatsapp}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:bg-stone-50"
+            >
+              <WhatsAppIcon className="size-4 text-whatsapp" />
+              Share to WhatsApp
+            </a>
+            <button
+              type="button"
+              onClick={copyLink}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-ink hover:bg-stone-50"
+            >
+              <InstagramIcon className="size-4 text-instagram" />
+              Copy link for Instagram
+            </button>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+      <InstagramStoryTutorialModal open={tutorialOpen} onOpenChange={setTutorialOpen} />
+    </>
   );
 }
