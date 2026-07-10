@@ -11,14 +11,8 @@ import "./styles/tokens.css";
 
 import { InstallPrompt } from "@/components/layout/InstallPrompt";
 import { Toaster } from "@/components/ui/Toaster";
-import { useFavoritesSync } from "@/hooks/useFavorites";
-import { isSupabaseConfigured, supabase } from "@/services/api/client";
-import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
-import { AuthCallbackPage } from "@/routes/auth/AuthCallbackPage";
 import { LoginPage } from "@/routes/auth/LoginPage";
-import { RequireMerchant } from "@/routes/auth/RequireAuth";
-import { ShopDetailsOnboardingPage } from "@/routes/auth/ShopDetailsOnboardingPage";
 import { ShopperSignupPage } from "@/routes/auth/ShopperSignupPage";
 import { SignupPage } from "@/routes/auth/SignupPage";
 import { ShopsPage } from "@/routes/shops/ShopsPage";
@@ -47,26 +41,11 @@ window.addEventListener("online", () =>
   useToasts.getState().push("Back online", "success"),
 );
 
-// Keep the local session store honest against Supabase Auth: a revoked or
-// expired session (or a sign-out in another tab) previously left the app
-// believing the user was still signed in, since useAuth never listened for it.
-if (isSupabaseConfigured) {
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === "SIGNED_OUT") useAuth.getState().signOut();
-  });
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 30_000, retry: 1 },
   },
 });
-
-/** Mounted once at the app root to keep device-local favorites in sync with the server. */
-function FavoritesSync() {
-  useFavoritesSync();
-  return null;
-}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -75,19 +54,10 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/welcome" element={<LandingPage />} />
-          <Route
-            path="/shop"
-            element={
-              <RequireMerchant>
-                <StorefrontPage />
-              </RequireMerchant>
-            }
-          />
+          <Route path="/shop" element={<StorefrontPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/signup/shopper" element={<ShopperSignupPage />} />
-          <Route path="/signup/shop-details" element={<ShopDetailsOnboardingPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/shops" element={<ShopsPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
@@ -95,53 +65,17 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order/:id" element={<OrderPage />} />
           <Route path="/orders" element={<OrdersPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <RequireMerchant>
-                <DashboardOverviewPage />
-              </RequireMerchant>
-            }
-          />
-          <Route
-            path="/dashboard/inventory"
-            element={
-              <RequireMerchant>
-                <InventoryPage />
-              </RequireMerchant>
-            }
-          />
-          <Route
-            path="/dashboard/orders"
-            element={
-              <RequireMerchant>
-                <OrdersDashboardPage />
-              </RequireMerchant>
-            }
-          />
-          <Route
-            path="/dashboard/analytics"
-            element={
-              <RequireMerchant>
-                <AnalyticsPage />
-              </RequireMerchant>
-            }
-          />
-          <Route
-            path="/dashboard/settings"
-            element={
-              <RequireMerchant>
-                <SettingsPage />
-              </RequireMerchant>
-            }
-          />
+          <Route path="/dashboard" element={<DashboardOverviewPage />} />
+          <Route path="/dashboard/inventory" element={<InventoryPage />} />
+          <Route path="/dashboard/orders" element={<OrdersDashboardPage />} />
+          <Route path="/dashboard/analytics" element={<AnalyticsPage />} />
+          <Route path="/dashboard/settings" element={<SettingsPage />} />
           <Route path="/dev/components" element={<ComponentsPage />} />
           {/* public shop by slug — keep LAST so static routes match first */}
           <Route path="/:shopSlug" element={<StorefrontPage />} />
         </Routes>
         <Toaster />
         <InstallPrompt />
-        <FavoritesSync />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

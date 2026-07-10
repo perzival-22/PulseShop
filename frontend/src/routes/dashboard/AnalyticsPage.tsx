@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 import { services } from "@/services";
 import type { MerchantOrder, OrderChannel } from "@/types";
 
+// Import your new Recharts component!
+import { RevenueChart } from "./RevenueChart";
+
 const CHANNEL_LABEL: Record<OrderChannel, string> = {
   whatsapp: "WhatsApp",
   instagram: "Instagram",
@@ -16,8 +19,7 @@ const CHANNEL_LABEL: Record<OrderChannel, string> = {
   direct: "Direct",
 };
 
-// Local calendar date (YYYY-MM-DD), not UTC — Kenya is UTC+3, so bucketing by
-// toISOString() shifted orders placed before 3am onto the previous day's bar.
+// Local calendar date (YYYY-MM-DD), not UTC
 const dayKey = (iso: string) => new Date(iso).toLocaleDateString("en-CA");
 
 function computeAnalytics(orders: MerchantOrder[]) {
@@ -25,7 +27,6 @@ function computeAnalytics(orders: MerchantOrder[]) {
   const revenue = paid.reduce((s, o) => s + o.totalKes, 0);
   const aov = paid.length ? Math.round(revenue / paid.length) : 0;
 
-  // units + revenue per product name
   const byProduct = new Map<string, { units: number; revenue: number; image: string }>();
   for (const o of orders) {
     for (const it of o.items) {
@@ -41,14 +42,12 @@ function computeAnalytics(orders: MerchantOrder[]) {
     .sort((a, b) => b.units - a.units)
     .slice(0, 5);
 
-  // channel breakdown
   const channels = { whatsapp: 0, instagram: 0, facebook: 0, direct: 0 } as Record<
     OrderChannel,
     number
   >;
   for (const o of orders) channels[o.channel] += 1;
 
-  // last 7 days revenue (paid)
   const days: { label: string; total: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -76,7 +75,6 @@ export function AnalyticsPage() {
 
   const a = useMemo(() => computeAnalytics(ordersQ.data ?? []), [ordersQ.data]);
   const lowStock = (productsQ.data ?? []).filter((p) => p.status !== "available");
-  const maxDay = Math.max(1, ...a.days.map((d) => d.total));
   const totalChannelOrders = Math.max(1, a.orderCount);
 
   const loading = ordersQ.isLoading || productsQ.isLoading;
@@ -105,22 +103,14 @@ export function AnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* 7-day revenue */}
+              {/* 7-day revenue (Now using Recharts) */}
               <section className="rounded-card bg-card p-6 shadow-soft">
                 <h2 className="text-lg font-extrabold text-ink">Revenue · last 7 days</h2>
-                <div className="mt-6 flex h-40 items-end justify-between gap-2">
-                  {a.days.map((d, i) => (
-                    <div key={i} className="flex flex-1 flex-col items-center gap-2">
-                      <div className="flex w-full flex-1 items-end">
-                        <div
-                          className="w-full rounded-t-md bg-primary/80 transition-all"
-                          style={{ height: `${Math.max(4, (d.total / maxDay) * 100)}%` }}
-                          title={formatKes(d.total)}
-                        />
-                      </div>
-                      <span className="text-[11px] font-medium text-muted">{d.label}</span>
-                    </div>
-                  ))}
+                {/* Recharts automatically fills the container width/height you give it */}
+                <div className="-ml-5 mt-4 h-80 w-full flex-1">
+                  <RevenueChart 
+                    data={a.days.map(d => ({ name: d.label, total: d.total }))} 
+                  />
                 </div>
               </section>
 
