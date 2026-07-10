@@ -16,7 +16,9 @@ const CHANNEL_LABEL: Record<OrderChannel, string> = {
   direct: "Direct",
 };
 
-const dayKey = (iso: string) => new Date(iso).toISOString().slice(0, 10);
+// Local calendar date (YYYY-MM-DD), not UTC — Kenya is UTC+3, so bucketing by
+// toISOString() shifted orders placed before 3am onto the previous day's bar.
+const dayKey = (iso: string) => new Date(iso).toLocaleDateString("en-CA");
 
 function computeAnalytics(orders: MerchantOrder[]) {
   const paid = orders.filter((o) => o.paymentStatus === "paid");
@@ -50,9 +52,8 @@ function computeAnalytics(orders: MerchantOrder[]) {
   const days: { label: string; total: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
-    d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = d.toLocaleDateString("en-CA");
     const total = paid.filter((o) => dayKey(o.placedAt) === key).reduce((s, o) => s + o.totalKes, 0);
     days.push({ label: d.toLocaleDateString("en-KE", { weekday: "short" }), total });
   }

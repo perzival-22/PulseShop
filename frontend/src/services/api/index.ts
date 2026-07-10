@@ -1,5 +1,6 @@
 import type { Services } from "../types";
 import { authApi } from "./auth";
+import { favoritesApi } from "./favorites";
 import { followsApi } from "./follows";
 import { ordersApi } from "./orders";
 import { paymentsApi } from "./payments";
@@ -16,6 +17,7 @@ export const apiServices: Services = {
   products: productsApi,
   orders: ordersApi,
   follows: followsApi,
+  favorites: favoritesApi,
   payments: paymentsApi,
   storage: storageApi,
 };

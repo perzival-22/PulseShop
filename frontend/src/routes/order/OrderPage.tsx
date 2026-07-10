@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Minus, Pencil, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router";
 import { z } from "zod";
@@ -32,6 +32,12 @@ const customerSchema = z.object({
 type CustomerForm = z.infer<typeof customerSchema>;
 type Channel = "whatsapp" | "instagram" | "facebook";
 
+const CHANNEL_LABEL: Record<Channel, string> = {
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+};
+
 const channels: { id: Channel; label: string; icon: typeof WhatsAppIcon }[] = [
   { id: "whatsapp", label: "WhatsApp", icon: WhatsAppIcon },
   { id: "instagram", label: "Instagram", icon: InstagramIcon },
@@ -60,6 +66,7 @@ export function OrderPage() {
   const addOrder = useOrderHistory((s) => s.add);
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [payOpen, setPayOpen] = useState(false);
+  const [pendingReference, setPendingReference] = useState<string | null>(null);
 
   const {
     register,
@@ -74,6 +81,16 @@ export function OrderPage() {
   });
 
   const merchant = merchantQ.data;
+
+  // A qty carried over from a previous product (via the persisted order
+  // store) can exceed this product's stock — the +/- buttons only clamped
+  // on increment, not on load. Clamp whenever the product changes.
+  useEffect(() => {
+    if (product && product.stockQty > 0 && qty > product.stockQty) {
+      setQty(product.stockQty);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   if (productQ.isLoading || !merchant) {
     return (
@@ -118,36 +135,54 @@ export function OrderPage() {
     });
   };
 
-  const persistOrder = (
-    data: { name: string; phone: string; notes?: string },
-    ch: Channel | "direct",
-    payment: { method: PaymentMethod; status: "paid" } | null,
-  ) =>
-    // Record the order in the backend so it shows in the merchant's dashboard.
-    // Fire-and-forget: never block the shopper's WhatsApp/payment handoff on it.
-    services.orders
-      .submitOrder({
-        productId: product.id,
-        size: selectedSize,
-        qty,
-        customer: { name: data.name, phone: data.phone, notes: data.notes ?? "" },
-        channel: ch,
-        payment,
-      })
-      .catch(() => {});
+  // Creates the real DB order (pending) and returns its server-generated
+  // reference — the single source of truth used everywhere downstream
+  // (local order history, the WhatsApp/IG/FB message, the payment sheet).
+  const createOrder = (data: { name: string; phone: string; notes?: string }, ch: Channel | "direct") =>
+    services.orders.submitOrder({
+      productId: product.id,
+      size: selectedSize,
+      qty,
+      customer: { name: data.name, phone: data.phone, notes: data.notes ?? "" },
+      channel: ch,
+      payment: null,
+    });
 
-  const sendOrder = handleSubmit((data) => {
+  const sendOrder = handleSubmit(async (data) => {
     saveCustomer({ name: data.name, phone: data.phone, notes: data.notes ?? "" });
-    const url = orderLink(
+
+    // Open the tab synchronously (inside the click gesture) so the browser
+    // doesn't treat it as a popup once we come back from the await below.
+    const win = window.open("", "_blank", "noopener");
+
+    let reference: string;
+    try {
+      ({ reference } = await createOrder(data, channel));
+    } catch {
+      win?.close();
+      push("Couldn't send your order — check your connection and try again", "danger");
+      return;
+    }
+
+    const { url, message } = orderLink(
       merchant,
       product,
       { size: selectedSize, qty, name: data.name, phone: data.phone, notes: data.notes ?? "" },
       channel,
+      reference,
     );
-    recordOrder(`PS-${Date.now().toString(36).toUpperCase()}`, null, channel);
-    persistOrder(data, channel, null);
-    window.open(url, "_blank", "noopener");
-    push(`Order sent via ${channel === "whatsapp" ? "WhatsApp" : channel === "instagram" ? "Instagram" : "Facebook"}`, "success");
+
+    if (channel === "instagram" || channel === "facebook") {
+      // ig.me/m.me never accept a prefilled message — hand it over via clipboard.
+      await navigator.clipboard?.writeText(message).catch(() => {});
+      push(`Order details copied — paste them into the ${CHANNEL_LABEL[channel]} chat`, "success");
+    } else {
+      push(`Order sent via ${CHANNEL_LABEL[channel]}`, "success");
+    }
+    if (win) win.location.href = url;
+    else window.open(url, "_blank", "noopener");
+
+    recordOrder(reference, null, channel);
   });
 
   const openPayment = async () => {
@@ -158,7 +193,13 @@ export function OrderPage() {
     }
     const data = getValues();
     saveCustomer({ name: data.name, phone: data.phone, notes: data.notes ?? "" });
-    setPayOpen(true);
+    try {
+      const { reference } = await createOrder(data, "direct");
+      setPendingReference(reference);
+      setPayOpen(true);
+    } catch {
+      push("Couldn't start checkout — check your connection and try again", "danger");
+    }
   };
 
   return (
@@ -301,10 +342,12 @@ export function OrderPage() {
         onOpenChange={setPayOpen}
         amount={total}
         defaultPhone={getValues("phone") || customer.phone}
+        merchantName={merchant.name}
         merchantWhatsApp={merchant.contacts.whatsapp}
-        onPaid={(reference, method) => {
-          recordOrder(reference, method, "direct");
-          persistOrder(customer, "direct", { method, status: "paid" });
+        orderReference={pendingReference ?? ""}
+        onPaid={(method) => {
+          if (!pendingReference) return;
+          recordOrder(pendingReference, method, "direct");
         }}
       />
     </MobileShell>

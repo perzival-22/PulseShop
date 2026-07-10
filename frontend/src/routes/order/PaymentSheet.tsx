@@ -14,7 +14,7 @@ type Stage =
   | { step: "mpesa-phone" }
   | { step: "pending"; method: PaymentMethod }
   | { step: "paypal-approve" }
-  | { step: "success"; reference: string; method: PaymentMethod }
+  | { step: "success"; method: PaymentMethod }
   | { step: "failed"; method: PaymentMethod };
 
 export function PaymentSheet({
@@ -22,15 +22,20 @@ export function PaymentSheet({
   onOpenChange,
   amount,
   defaultPhone,
+  merchantName,
   merchantWhatsApp,
+  orderReference,
   onPaid,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   amount: number;
   defaultPhone: string;
+  merchantName: string;
   merchantWhatsApp: string;
-  onPaid: (reference: string, method: PaymentMethod) => void;
+  /** The order this payment is for — already created (pending) before the sheet opens. */
+  orderReference: string;
+  onPaid: (method: PaymentMethod) => void;
 }) {
   const [stage, setStage] = useState<Stage>({ step: "choose" });
   const [method, setMethod] = useState<PaymentMethod>("mpesa");
@@ -48,22 +53,30 @@ export function PaymentSheet({
 
   const startMpesa = async () => {
     setStage({ step: "pending", method: "mpesa" });
-    const result = await services.payments.payWithMpesa(phone, amount);
-    if (result.status === "paid") {
-      setStage({ step: "success", reference: result.reference, method: "mpesa" });
-      onPaid(result.reference, "mpesa");
-    } else {
+    try {
+      const result = await services.payments.payWithMpesa(phone, amount);
+      if (result.status === "paid") {
+        setStage({ step: "success", method: "mpesa" });
+        onPaid("mpesa");
+      } else {
+        setStage({ step: "failed", method: "mpesa" });
+      }
+    } catch {
       setStage({ step: "failed", method: "mpesa" });
     }
   };
 
   const startPaypal = async () => {
     setStage({ step: "pending", method: "paypal" });
-    const result = await services.payments.payWithPaypal(amount);
-    if (result.status === "paid") {
-      setStage({ step: "success", reference: result.reference, method: "paypal" });
-      onPaid(result.reference, "paypal");
-    } else {
+    try {
+      const result = await services.payments.payWithPaypal(amount);
+      if (result.status === "paid") {
+        setStage({ step: "success", method: "paypal" });
+        onPaid("paypal");
+      } else {
+        setStage({ step: "failed", method: "paypal" });
+      }
+    } catch {
       setStage({ step: "failed", method: "paypal" });
     }
   };
@@ -140,7 +153,7 @@ export function PaymentSheet({
           <div className="rounded-card border border-stone-200 bg-stone-50 p-5">
             <PayPalIcon className="mx-auto size-8 text-[#003087]" />
             <p className="mt-3 text-sm font-semibold text-ink">
-              Approve payment of {formatKes(amount)} to Zawadi Styles?
+              Approve payment of {formatKes(amount)} to {merchantName}?
             </p>
             <p className="mt-1 text-xs text-muted">PayPal sandbox — mock approval</p>
           </div>
@@ -180,12 +193,12 @@ export function PaymentSheet({
             <p className="text-lg font-extrabold text-ink">Payment successful!</p>
             <p className="mt-1 text-sm text-muted">
               Order reference:{" "}
-              <span className="font-mono font-bold text-ink">{stage.reference}</span>
+              <span className="font-mono font-bold text-ink">{orderReference}</span>
             </p>
           </div>
           <a
             href={`https://wa.me/${merchantWhatsApp}?text=${encodeURIComponent(
-              `Hi! I just paid for my order ${stage.reference}. Please confirm delivery details.`,
+              `Hi! I just paid for my order ${orderReference}. Please confirm delivery details.`,
             )}`}
             target="_blank"
             rel="noreferrer"

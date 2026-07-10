@@ -48,9 +48,6 @@ export function ProductModal({
   const [stockQty, setStockQty] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
-  // "DB Synced" indicator: pulses orange ~900ms on every ± tap, then back to green
-  const [syncing, setSyncing] = useState(false);
-  const syncTimer = useRef<ReturnType<typeof setTimeout>>();
   const fileInput = useRef<HTMLInputElement>(null);
 
   const {
@@ -85,7 +82,6 @@ export function ProductModal({
       setSizes([]);
       setStockQty(0);
     }
-    setSyncing(false);
   }, [open, product, reset]);
 
   const name = watch("name");
@@ -96,12 +92,7 @@ export function ProductModal({
     if (!product && name && !sku) setValue("sku", suggestSku(name, category));
   }, [name, category, sku, product, setValue]);
 
-  const bumpStock = (delta: number) => {
-    setStockQty((q) => Math.max(0, q + delta));
-    setSyncing(true);
-    clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(() => setSyncing(false), 900);
-  };
+  const bumpStock = (delta: number) => setStockQty((q) => Math.max(0, q + delta));
 
   const addFiles = useCallback(
     async (files: FileList | null) => {
@@ -114,8 +105,8 @@ export function ProductModal({
           const url = await services.storage.uploadImage(file, "products");
           setImages((imgs) => [...imgs, url]);
         }
-      } catch {
-        push("Couldn't upload image", "danger");
+      } catch (err) {
+        push(err instanceof Error ? err.message : "Couldn't upload image", "danger");
       } finally {
         setUploading(false);
       }
@@ -150,7 +141,7 @@ export function ProductModal({
       priceKes: data.priceKes,
       discountPct: data.discountPct || null,
       stockQty,
-      images: images.length ? images : product?.images ?? [],
+      images,
       sizes: sizes.length ? sizes : null,
       description: data.description ?? "",
     });
@@ -331,15 +322,12 @@ export function ProductModal({
                 </button>
               </div>
             </div>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors duration-300",
-                syncing ? "bg-warning/15 text-warning animate-pulse" : "bg-success/10 text-success",
-              )}
-            >
-              <Database className="size-3.5" />
-              {syncing ? "Syncing…" : "DB Synced"}
-            </span>
+            {mutation.isPending && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/15 px-3 py-1.5 text-xs font-bold text-warning">
+                <Database className="size-3.5 animate-pulse" />
+                Saving…
+              </span>
+            )}
           </div>
         </div>
 

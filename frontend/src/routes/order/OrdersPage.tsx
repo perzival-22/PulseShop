@@ -38,7 +38,12 @@ export function OrdersPage() {
           </div>
         ) : (
           orders.map((o) => (
-            <div key={o.reference} className="flex gap-3 rounded-card bg-card p-3 shadow-soft">
+            // A cart checkout records one card per line item, all sharing the
+            // same order reference — key on the line, not just the order.
+            <div
+              key={`${o.reference}-${o.productId}-${o.size ?? "one"}`}
+              className="flex gap-3 rounded-card bg-card p-3 shadow-soft"
+            >
               <img src={o.image} alt={o.productName} className="size-16 rounded-xl object-cover" />
               <div className="flex flex-1 flex-col justify-between py-0.5">
                 <div className="flex items-start justify-between gap-2">

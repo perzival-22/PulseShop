@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { discountedPrice, formatKes } from "@/lib/currency";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Modal";
+import { useFavoriteToggle } from "@/hooks/useFavorites";
 import { useCart } from "@/stores/cart";
 import { useFavorites } from "@/stores/favorites";
 import { useToasts } from "@/stores/toast";
@@ -14,7 +15,7 @@ import { StockBadge } from "./StockBadge";
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
   const isFavorite = useFavorites((s) => s.isFavorite(product.id));
-  const toggle = useFavorites((s) => s.toggle);
+  const toggle = useFavoriteToggle();
   const addToCart = useCart((s) => s.add);
   const push = useToasts((s) => s.push);
 

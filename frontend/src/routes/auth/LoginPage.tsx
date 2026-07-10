@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { z } from "zod";
@@ -9,6 +10,7 @@ import { services } from "@/services";
 import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
 import { AuthShell } from "./AuthShell";
+import { GoogleButton } from "./GoogleButton";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -25,8 +27,27 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  const [resetting, setResetting] = useState(false);
+
+  const onForgotPassword = async () => {
+    const email = getValues("email")?.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      push("Enter your email above first");
+      return;
+    }
+    setResetting(true);
+    try {
+      await services.auth.resetPassword(email);
+      push("Check your inbox for a password reset link", "success");
+    } catch {
+      push("Couldn't send the reset email — try again", "danger");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const onSubmit = handleSubmit(async (data) => {
     try {
@@ -39,7 +60,11 @@ export function LoginPage() {
         push("Welcome back", "success");
         navigate("/shops");
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && /email not confirmed/i.test(err.message)) {
+        push("Please confirm your email first — check your inbox", "danger");
+        return;
+      }
       push("Couldn't sign you in. Check your details and try again.", "danger");
     }
   });
@@ -77,8 +102,13 @@ export function LoginPage() {
             {...register("password")}
           />
           <div className="text-right">
-            <button type="button" className="text-xs font-semibold text-primary hover:underline">
-              Forgot password?
+            <button
+              type="button"
+              onClick={onForgotPassword}
+              disabled={resetting}
+              className="text-xs font-semibold text-primary hover:underline disabled:opacity-60"
+            >
+              {resetting ? "Sending…" : "Forgot password?"}
             </button>
           </div>
         </div>
@@ -87,6 +117,12 @@ export function LoginPage() {
           Sign in
         </Button>
       </form>
+      <div className="my-4 flex items-center gap-3 text-xs font-semibold text-muted">
+        <div className="h-px flex-1 bg-white/60" />
+        or
+        <div className="h-px flex-1 bg-white/60" />
+      </div>
+      <GoogleButton intent="login" label="Continue with Google" />
     </AuthShell>
   );
 }

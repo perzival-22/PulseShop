@@ -6,12 +6,8 @@ import type {
   PaymentMethod,
   PaymentStatus,
 } from "@/types";
-import { discountedPrice } from "@/lib/currency";
 import type { OrderService } from "../types";
 import { requireUserId, supabase } from "./client";
-
-const makeRef = () =>
-  `PS-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
 
 interface OrderItemRow {
   product_name: string;
@@ -62,105 +58,42 @@ function toMerchantOrder(row: OrderRow): MerchantOrder {
 }
 
 /**
- * Order placement for shoppers. Looks up the product to snapshot price/name,
- * then writes an order header + one line item. IDs are generated client-side so
- * we don't depend on RLS letting the caller read the row back after insert.
+ * Order placement for shoppers. Delegates to the `place_order` Postgres
+ * function (migration 0005), which — in one transaction — validates every
+ * line belongs to the same shop, locks and decrements stock, recomputes
+ * prices from the DB, and generates a collision-checked reference. Orders are
+ * always created 'pending'; only the owning merchant or a future payment
+ * webhook can flip payment_status to 'paid'.
  */
+async function placeOrder(
+  customer: { name: string; phone: string; notes?: string },
+  channel: OrderChannel,
+  payment: { method: PaymentMethod; status: PaymentStatus } | null,
+  items: { productId: string; size: string | null; qty: number }[],
+): Promise<{ reference: string }> {
+  const { data, error } = await supabase.rpc("place_order", {
+    p_customer_name: customer.name,
+    p_customer_phone: customer.phone,
+    p_customer_notes: customer.notes ?? "",
+    p_channel: channel,
+    p_payment_method: payment?.method ?? null,
+    p_items: items.map((i) => ({ product_id: i.productId, size: i.size, qty: i.qty })),
+  });
+  if (error) throw error;
+  const row = (Array.isArray(data) ? data[0] : data) as { reference: string } | undefined;
+  if (!row?.reference) throw new Error("Order was not created");
+  return { reference: row.reference };
+}
+
 export const ordersApi: OrderService = {
   async submitOrder(draft: OrderDraft): Promise<{ reference: string }> {
-    const { data: product, error: pErr } = await supabase
-      .from("products")
-      .select("merchant_id, name, images, price_kes, discount_pct")
-      .eq("id", draft.productId)
-      .single();
-    if (pErr) throw pErr;
-
-    const unit = discountedPrice(product.price_kes, product.discount_pct);
-    const total = unit * draft.qty;
-    const reference = makeRef();
-    const orderId = crypto.randomUUID();
-
-    const { error: oErr } = await supabase.from("orders").insert({
-      id: orderId,
-      reference,
-      merchant_id: product.merchant_id,
-      customer_name: draft.customer.name,
-      customer_phone: draft.customer.phone,
-      customer_notes: draft.customer.notes,
-      channel: draft.channel,
-      payment_method: draft.payment?.method ?? null,
-      payment_status: draft.payment?.status === "paid" ? "paid" : "pending",
-      subtotal_kes: total,
-      total_kes: total,
-    });
-    if (oErr) throw oErr;
-
-    const { error: iErr } = await supabase.from("order_items").insert({
-      order_id: orderId,
-      product_id: draft.productId,
-      product_name: product.name,
-      image: product.images?.[0] ?? "",
-      size: draft.size,
-      qty: draft.qty,
-      unit_price_kes: unit,
-    });
-    if (iErr) throw iErr;
-
-    return { reference };
+    return placeOrder(draft.customer, draft.channel, draft.payment, [
+      { productId: draft.productId, size: draft.size, qty: draft.qty },
+    ]);
   },
 
   async submitCartOrder(draft: CartOrderDraft): Promise<{ reference: string }> {
-    // Snapshot names/images and recompute prices from the DB — cart lines may
-    // hold stale prices captured at add-time.
-    const ids = draft.items.map((i) => i.productId);
-    const { data: products, error: pErr } = await supabase
-      .from("products")
-      .select("id, merchant_id, name, images, price_kes, discount_pct")
-      .in("id", ids);
-    if (pErr) throw pErr;
-    if (!products || products.length === 0) throw new Error("No products found for this order");
-
-    const byId = new Map(products.map((p) => [p.id, p]));
-    const lines = draft.items.flatMap((item) => {
-      const p = byId.get(item.productId);
-      if (!p) return []; // product removed since it was added to the cart
-      const unit = discountedPrice(p.price_kes, p.discount_pct);
-      return [{
-        product_id: p.id,
-        product_name: p.name,
-        image: p.images?.[0] ?? "",
-        size: item.size,
-        qty: item.qty,
-        unit_price_kes: unit,
-      }];
-    });
-    if (lines.length === 0) throw new Error("None of the cart items exist any more");
-
-    const total = lines.reduce((sum, l) => sum + l.unit_price_kes * l.qty, 0);
-    const reference = makeRef();
-    const orderId = crypto.randomUUID();
-
-    const { error: oErr } = await supabase.from("orders").insert({
-      id: orderId,
-      reference,
-      merchant_id: products[0].merchant_id,
-      customer_name: draft.customer.name,
-      customer_phone: draft.customer.phone,
-      customer_notes: draft.customer.notes,
-      channel: draft.channel,
-      payment_method: draft.payment?.method ?? null,
-      payment_status: draft.payment?.status === "paid" ? "paid" : "pending",
-      subtotal_kes: total,
-      total_kes: total,
-    });
-    if (oErr) throw oErr;
-
-    const { error: iErr } = await supabase
-      .from("order_items")
-      .insert(lines.map((l) => ({ ...l, order_id: orderId })));
-    if (iErr) throw iErr;
-
-    return { reference };
+    return placeOrder(draft.customer, draft.channel, draft.payment, draft.items);
   },
 
   async listOrders(): Promise<MerchantOrder[]> {

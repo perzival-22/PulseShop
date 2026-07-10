@@ -1,4 +1,5 @@
 import type { Merchant, Product, StockStatus } from "@/types";
+import { toSocialHandle, toWhatsAppDigits } from "@/lib/phone";
 import type { MerchantUpdate, ProductInput } from "../types";
 
 /** A row from the `products` table (snake_case). */
@@ -74,9 +75,9 @@ export function toMerchant(
     isOnline: row.is_online,
     stats: { products: stats.products, orders: stats.orders, rating: Number(row.rating) },
     contacts: {
-      whatsapp: row.whatsapp ?? "",
-      instagram: row.instagram ?? "",
-      facebook: row.facebook ?? "",
+      whatsapp: row.whatsapp ? toWhatsAppDigits(row.whatsapp) : "",
+      instagram: row.instagram ? toSocialHandle(row.instagram) : "",
+      facebook: row.facebook ? toSocialHandle(row.facebook) : "",
     },
   };
 }
@@ -106,8 +107,8 @@ export function merchantUpdateToRow(patch: MerchantUpdate): Record<string, unkno
   if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
   if (patch.bannerUrl !== undefined) row.banner_url = patch.bannerUrl;
   if (patch.isOnline !== undefined) row.is_online = patch.isOnline;
-  if (patch.whatsapp !== undefined) row.whatsapp = patch.whatsapp;
-  if (patch.instagram !== undefined) row.instagram = patch.instagram;
-  if (patch.facebook !== undefined) row.facebook = patch.facebook;
+  if (patch.whatsapp !== undefined) row.whatsapp = patch.whatsapp ? toWhatsAppDigits(patch.whatsapp) : "";
+  if (patch.instagram !== undefined) row.instagram = patch.instagram ? toSocialHandle(patch.instagram) : "";
+  if (patch.facebook !== undefined) row.facebook = patch.facebook ? toSocialHandle(patch.facebook) : "";
   return row;
 }

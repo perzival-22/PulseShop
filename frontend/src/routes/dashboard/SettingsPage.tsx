@@ -8,8 +8,14 @@ import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { services } from "@/services";
 import type { MerchantUpdate } from "@/services";
+import { slugError, slugify } from "@/lib/slug";
 import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
+
+/** PostgREST surfaces a Postgres unique_violation as error.code "23505". */
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
+}
 
 export function SettingsPage() {
   const qc = useQueryClient();
@@ -53,6 +59,8 @@ export function SettingsPage() {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  const handleIssue = slugError(form.handle);
+
   const updateMut = useMutation({
     mutationFn: (patch: MerchantUpdate) => services.products.updateMerchant(patch),
     onSuccess: (updated) => {
@@ -61,7 +69,13 @@ export function SettingsPage() {
       if (session) setSession({ ...session, shopName: updated.name, shopSlug: updated.handle });
       push("Profile saved", "success");
     },
-    onError: () => push("Couldn't save profile", "danger"),
+    onError: (err) => {
+      if (isUniqueViolation(err)) {
+        push("That username is already taken — try another one", "danger");
+      } else {
+        push("Couldn't save profile", "danger");
+      }
+    },
   });
 
   const emailMut = useMutation({
@@ -75,23 +89,30 @@ export function SettingsPage() {
 
   const onAvatarPick = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
+    const prevUrl = merchant?.avatarUrl;
     try {
       const avatarUrl = await services.storage.uploadImage(file, "avatars");
       updateMut.mutate({ avatarUrl });
-    } catch {
-      push("Couldn't upload that image", "danger");
+      if (prevUrl) services.storage.deleteImage(prevUrl).catch(() => {});
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't upload that image", "danger");
     }
   };
 
-  const saveProfile = () =>
+  const saveProfile = () => {
+    if (handleIssue) {
+      push(handleIssue, "danger");
+      return;
+    }
     updateMut.mutate({
       name: form.name.trim(),
-      handle: form.handle.trim(),
+      handle: slugify(form.handle),
       location: form.location.trim(),
       whatsapp: form.whatsapp.trim(),
       instagram: form.instagram.trim(),
       facebook: form.facebook.trim(),
     });
+  };
 
   const handleSignOut = async () => {
     try {
@@ -145,7 +166,12 @@ export function SettingsPage() {
 
               <div className="mt-5 grid grid-cols-2 gap-4">
                 <Input label="Shop name" value={form.name} onChange={set("name")} />
-                <Input label="Username" value={form.handle} onChange={set("handle")} />
+                <Input
+                  label="Username"
+                  value={form.handle}
+                  onChange={set("handle")}
+                  error={form.handle ? (handleIssue ?? undefined) : undefined}
+                />
                 <div className="col-span-2">
                   <Input label="Location" value={form.location} onChange={set("location")} />
                 </div>
@@ -157,7 +183,7 @@ export function SettingsPage() {
               </div>
 
               <div className="mt-5 flex justify-end">
-                <Button onClick={saveProfile} disabled={updateMut.isPending}>
+                <Button onClick={saveProfile} disabled={updateMut.isPending || Boolean(handleIssue)}>
                   {updateMut.isPending && <Loader2 className="size-4 animate-spin" />}
                   Save profile
                 </Button>

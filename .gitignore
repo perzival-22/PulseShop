@@ -2,12 +2,13 @@ node_modules/
 dist/
 dev-dist/
 *.local
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
 .DS_Store
 .claude
-bakend/.env
+backend/.env
 # Python
 __pycache__/
 *.pyc

@@ -35,11 +35,13 @@ export function DashboardOverviewPage() {
 
   const onBannerPick = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
+    const prevUrl = merchant?.bannerUrl;
     try {
       const bannerUrl = await services.storage.uploadImage(file, "banners");
       updateMut.mutate({ bannerUrl });
-    } catch {
-      push("Couldn't upload that image", "danger");
+      if (prevUrl) services.storage.deleteImage(prevUrl).catch(() => {});
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't upload that image", "danger");
     }
   };
 

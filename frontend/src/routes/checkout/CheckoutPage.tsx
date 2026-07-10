@@ -22,6 +22,12 @@ import { useShop } from "@/stores/shop";
 import { useToasts } from "@/stores/toast";
 import { PaymentSheet } from "@/routes/order/PaymentSheet";
 
+const CHANNEL_LABEL: Record<Channel, string> = {
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+};
+
 const customerSchema = z.object({
   name: z.string().min(2, "Enter your full name"),
   phone: z
@@ -60,6 +66,7 @@ export function CheckoutPage() {
   });
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [payOpen, setPayOpen] = useState(false);
+  const [pendingReference, setPendingReference] = useState<string | null>(null);
 
   const {
     register,
@@ -112,39 +119,54 @@ export function CheckoutPage() {
     }
   };
 
-  const persistOrder = (
-    data: { name: string; phone: string; notes?: string },
-    ch: Channel | "direct",
-    payment: { method: PaymentMethod; status: "paid" } | null,
-  ) =>
-    // Record the order in the backend so it shows in the merchant's dashboard.
-    // Fire-and-forget: never block the shopper's WhatsApp/payment handoff on it.
-    services.orders
-      .submitCartOrder({
-        shopSlug,
-        items: items.map((i) => ({ productId: i.productId, size: i.size, qty: i.qty })),
-        customer: { name: data.name, phone: data.phone, notes: data.notes ?? "" },
-        channel: ch,
-        payment,
-      })
-      .catch(() => {});
+  // Creates the real DB order (pending) and returns its server-generated
+  // reference — the single source of truth used everywhere downstream
+  // (local order history, the WhatsApp/IG/FB message, the payment sheet).
+  const createOrder = (data: { name: string; phone: string; notes?: string }, ch: Channel | "direct") =>
+    services.orders.submitCartOrder({
+      shopSlug,
+      items: items.map((i) => ({ productId: i.productId, size: i.size, qty: i.qty })),
+      customer: { name: data.name, phone: data.phone, notes: data.notes ?? "" },
+      channel: ch,
+      payment: null,
+    });
 
-  const sendOrder = handleSubmit((data) => {
+  const sendOrder = handleSubmit(async (data) => {
     saveCustomer({ name: data.name, phone: data.phone, notes: data.notes ?? "" });
-    const url = cartOrderLink(
+
+    // Open the tab synchronously (inside the click gesture) so the browser
+    // doesn't treat it as a popup once we come back from the await below.
+    const win = window.open("", "_blank", "noopener");
+
+    let reference: string;
+    try {
+      ({ reference } = await createOrder(data, channel));
+    } catch {
+      win?.close();
+      push("Couldn't send your order — check your connection and try again", "danger");
+      return;
+    }
+
+    const { url, message } = cartOrderLink(
       merchant,
       items.map((i) => ({ name: i.name, size: i.size, qty: i.qty, unitPrice: i.unitPrice })),
       { name: data.name, phone: data.phone, notes: data.notes ?? "" },
       channel,
+      reference,
     );
-    recordOrders(`PS-${Date.now().toString(36).toUpperCase()}`, null, channel);
-    persistOrder(data, channel, null);
-    window.open(url, "_blank", "noopener");
+
+    if (channel === "instagram" || channel === "facebook") {
+      // ig.me/m.me never accept a prefilled message — hand it over via clipboard.
+      await navigator.clipboard?.writeText(message).catch(() => {});
+      push(`Order details copied — paste them into the ${CHANNEL_LABEL[channel]} chat`, "success");
+    } else {
+      push(`Order sent via ${CHANNEL_LABEL[channel]}`, "success");
+    }
+    if (win) win.location.href = url;
+    else window.open(url, "_blank", "noopener");
+
+    recordOrders(reference, null, channel);
     clearCart();
-    push(
-      `Order sent via ${channel === "whatsapp" ? "WhatsApp" : channel === "instagram" ? "Instagram" : "Facebook"}`,
-      "success",
-    );
     navigate("/orders");
   });
 
@@ -156,7 +178,13 @@ export function CheckoutPage() {
     }
     const data = getValues();
     saveCustomer({ name: data.name, phone: data.phone, notes: data.notes ?? "" });
-    setPayOpen(true);
+    try {
+      const { reference } = await createOrder(data, "direct");
+      setPendingReference(reference);
+      setPayOpen(true);
+    } catch {
+      push("Couldn't start checkout — check your connection and try again", "danger");
+    }
   };
 
   return (
@@ -274,10 +302,12 @@ export function CheckoutPage() {
         onOpenChange={setPayOpen}
         amount={total}
         defaultPhone={getValues("phone") || customer.phone}
+        merchantName={merchant.name}
         merchantWhatsApp={merchant.contacts.whatsapp}
-        onPaid={(reference, method) => {
-          recordOrders(reference, method, "direct");
-          persistOrder(getValues(), "direct", { method, status: "paid" });
+        orderReference={pendingReference ?? ""}
+        onPaid={(method) => {
+          if (!pendingReference) return;
+          recordOrders(pendingReference, method, "direct");
           clearCart();
           navigate("/orders");
         }}

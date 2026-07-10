@@ -2,7 +2,6 @@ import * as Popover from "@radix-ui/react-popover";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
-  Bell,
   Boxes,
   CheckCircle2,
   ChevronLeft,
@@ -51,6 +50,7 @@ export function InventoryPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // debounced search
   useEffect(() => {
@@ -128,6 +128,26 @@ export function InventoryPage() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["products"] }),
   });
 
+  const bulkDeleteMut = useMutation({
+    mutationFn: (ids: string[]) => Promise.all(ids.map((id) => services.products.deleteProduct(id))),
+    onMutate: async (ids) => {
+      await qc.cancelQueries({ queryKey: ["products"] });
+      const prev = qc.getQueryData<Product[]>(["products"]);
+      const idSet = new Set(ids);
+      qc.setQueryData<Product[]>(["products"], (old) => (old ?? []).filter((p) => !idSet.has(p.id)));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      qc.setQueryData(["products"], ctx?.prev);
+      push("Couldn't delete the selected products", "danger");
+    },
+    onSuccess: (_data, ids) => {
+      push(`${ids.length} product${ids.length === 1 ? "" : "s"} deleted`, "success");
+      setSelected(new Set());
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["products"] }),
+  });
+
   const toggleSelect = (id: string) =>
     setSelected((s) => {
       const next = new Set(s);
@@ -147,14 +167,6 @@ export function InventoryPage() {
           <h1 className="text-2xl font-extrabold text-ink">Product Inventory</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative flex size-10 items-center justify-center rounded-full bg-card shadow-soft"
-          >
-            <Bell className="size-5 text-muted" />
-            <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-favorite" />
-          </button>
           <Button
             onClick={() => {
               setEditing(null);
@@ -240,6 +252,25 @@ export function InventoryPage() {
           ))}
         </select>
       </div>
+
+      {/* bulk actions */}
+      {selected.size > 0 && (
+        <div className="mb-4 flex items-center justify-between rounded-card border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <p className="text-sm font-semibold text-ink">{selected.size} selected</p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="text-xs font-semibold text-muted hover:text-ink"
+            >
+              Clear
+            </button>
+            <Button variant="danger" size="sm" onClick={() => setBulkDeleteOpen(true)}>
+              <Trash2 className="size-4" /> Delete selected
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* table */}
       <div className="overflow-hidden rounded-card bg-card shadow-soft">
@@ -429,6 +460,31 @@ export function InventoryPage() {
             }}
           >
             <Trash2 className="size-4" /> Delete
+          </Button>
+        </div>
+      </Modal>
+
+      {/* bulk delete confirm */}
+      <Modal
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Delete selected products?"
+        description={`${selected.size} product${selected.size === 1 ? "" : "s"} will be permanently removed.`}
+        className="max-w-md"
+      >
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setBulkDeleteOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            disabled={bulkDeleteMut.isPending}
+            onClick={() => {
+              bulkDeleteMut.mutate([...selected]);
+              setBulkDeleteOpen(false);
+            }}
+          >
+            <Trash2 className="size-4" /> Delete {selected.size}
           </Button>
         </div>
       </Modal>

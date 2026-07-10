@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
-import { useOrderHistory } from "@/stores/orderHistory";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -16,7 +15,10 @@ const nav = [
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const merchantQ = useQuery({ queryKey: ["merchant"], queryFn: services.products.getMerchant });
-  const orderCount = useOrderHistory((s) => s.orders.length);
+  // Orders *received* by this merchant that still need action — not the
+  // shopper-side order-history store (that's this device's own placed orders).
+  const ordersQ = useQuery({ queryKey: ["orders-received"], queryFn: services.orders.listOrders });
+  const orderCount = (ordersQ.data ?? []).filter((o) => o.paymentStatus === "pending").length;
   const merchant = merchantQ.data;
 
   return (

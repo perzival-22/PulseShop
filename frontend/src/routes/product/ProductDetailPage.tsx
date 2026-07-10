@@ -14,6 +14,7 @@ import { discountedPrice, formatKes } from "@/lib/currency";
 import { productInquiryLinks } from "@/lib/deeplinks";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
+import { useFavoriteToggle } from "@/hooks/useFavorites";
 import { useCart } from "@/stores/cart";
 import { useFavorites } from "@/stores/favorites";
 import { useOrderStore } from "@/stores/order";
@@ -47,7 +48,7 @@ export function ProductDetailPage() {
   });
 
   const isFavorite = useFavorites((s) => s.isFavorite(id));
-  const toggle = useFavorites((s) => s.toggle);
+  const toggle = useFavoriteToggle();
   const addToCart = useCart((s) => s.add);
   const { selectedSize, setSelectedSize } = useOrderStore();
   const [localSize, setLocalSize] = useState<string | null>(null);

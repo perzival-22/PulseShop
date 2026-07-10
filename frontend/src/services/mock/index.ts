@@ -26,6 +26,7 @@ const STORAGE_KEY = "pulseshop-mock-products";
 const MERCHANT_KEY = "pulseshop-mock-merchant";
 const ORDERS_KEY = "pulseshop-mock-orders-received";
 const FOLLOWS_KEY = "pulseshop-mock-follows";
+const FAVORITES_KEY = "pulseshop-mock-server-favorites";
 
 const delay = (ms = LATENCY) => new Promise((r) => setTimeout(r, ms));
 
@@ -177,6 +178,10 @@ export const mockServices: Services = {
     },
 
     async updateEmail(_email: string): Promise<void> {
+      await delay();
+    },
+
+    async resetPassword(_email: string): Promise<void> {
       await delay();
     },
   },
@@ -380,10 +385,41 @@ export const mockServices: Services = {
     },
   },
 
+  favorites: {
+    // Stands in for the DB `favorites` table so the sync path (see
+    // hooks/useFavorites.ts) has something real to talk to in mock mode too.
+    async listFavorites(): Promise<string[]> {
+      await delay();
+      try {
+        return JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]") as string[];
+      } catch {
+        return [];
+      }
+    },
+
+    async addFavorite(productId: string): Promise<void> {
+      await delay();
+      const ids = new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]") as string[]);
+      ids.add(productId);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify([...ids]));
+    },
+
+    async removeFavorite(productId: string): Promise<void> {
+      await delay();
+      const ids = new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]") as string[]);
+      ids.delete(productId);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify([...ids]));
+    },
+  },
+
   storage: {
     async uploadImage(file: File, _folder: string): Promise<string> {
       // Mock keeps images inline as base64 data URLs.
       return fileToDataUrl(file);
+    },
+
+    async deleteImage(_url: string): Promise<void> {
+      // No real storage to clean up in mock mode.
     },
   },
 

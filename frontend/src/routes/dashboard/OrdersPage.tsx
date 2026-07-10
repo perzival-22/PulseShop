@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatKes } from "@/lib/currency";
+import { toWhatsAppDigits } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
 import type { MerchantOrder, OrderChannel, PaymentStatus } from "@/types";
@@ -170,7 +171,7 @@ export function OrdersDashboardPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <a
-                      href={`https://wa.me/${o.customerPhone.replace(/\D/g, "")}`}
+                      href={`https://wa.me/${toWhatsAppDigits(o.customerPhone)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-9 items-center gap-1.5 rounded-btn bg-whatsapp px-3 text-xs font-bold text-white"

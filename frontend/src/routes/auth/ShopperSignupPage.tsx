@@ -6,9 +6,11 @@ import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { services } from "@/services";
+import { EmailConfirmationRequiredError } from "@/services/types";
 import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
 import { AuthShell } from "./AuthShell";
+import { GoogleButton } from "./GoogleButton";
 
 const schema = z.object({
   name: z.string().min(2, "Enter your name"),
@@ -36,7 +38,12 @@ export function ShopperSignupPage() {
       setSession(user);
       push("Welcome to PulseShop 🎉", "success");
       navigate("/shops");
-    } catch {
+    } catch (err) {
+      if (err instanceof EmailConfirmationRequiredError) {
+        push("Check your email to confirm your account, then log in", "success");
+        navigate("/login");
+        return;
+      }
       push("Couldn't create your account. Please try again.", "danger");
     }
   });
@@ -89,6 +96,12 @@ export function ShopperSignupPage() {
           </Link>
         </p>
       </form>
+      <div className="my-4 flex items-center gap-3 text-xs font-semibold text-muted">
+        <div className="h-px flex-1 bg-white/60" />
+        or
+        <div className="h-px flex-1 bg-white/60" />
+      </div>
+      <GoogleButton intent="shopper" label="Continue with Google" />
     </AuthShell>
   );
 }

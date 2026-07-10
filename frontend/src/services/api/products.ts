@@ -11,13 +11,19 @@ import {
   toProduct,
 } from "./mappers";
 
-/** Product + order counts for a merchant, used to populate Merchant.stats. */
+/**
+ * Product + order counts for a merchant, used to populate Merchant.stats.
+ * Orders is fetched via the merchant_order_count RPC (security definer)
+ * rather than a plain `select count(*) from orders` — orders RLS only lets
+ * the owning merchant read their own rows, so a direct count silently read 0
+ * for every visitor viewing someone else's public storefront.
+ */
 async function merchantStats(uid: string): Promise<{ products: number; orders: number }> {
-  const [{ count: products }, { count: orders }] = await Promise.all([
+  const [{ count: products }, { data: orders }] = await Promise.all([
     supabase.from("products").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
-    supabase.from("orders").select("*", { count: "exact", head: true }).eq("merchant_id", uid),
+    supabase.rpc("merchant_order_count", { p_merchant_id: uid }),
   ]);
-  return { products: products ?? 0, orders: orders ?? 0 };
+  return { products: products ?? 0, orders: Number(orders ?? 0) };
 }
 
 /**

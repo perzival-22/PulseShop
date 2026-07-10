@@ -20,6 +20,7 @@ export function orderLink(
   product: Product,
   opts: { size: string | null; qty: number; name: string; phone: string; notes: string },
   channel: Exclude<OrderChannel, "direct">,
+  reference: string,
 ) {
   const price = discountedPrice(product.priceKes, product.discountPct);
   const lines = [
@@ -30,20 +31,22 @@ export function orderLink(
     `• Qty: ${opts.qty}`,
     `• Total: ${formatKes(price * opts.qty)}`,
     ``,
+    `Ref: ${reference}`,
     `Name: ${opts.name}`,
     `Phone: ${opts.phone}`,
     opts.notes ? `Notes: ${opts.notes}` : null,
   ].filter((l): l is string => l !== null);
   const msg = lines.join("\n");
 
-  switch (channel) {
-    case "whatsapp":
-      return `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`;
-    case "instagram":
-      return `https://ig.me/m/${merchant.contacts.instagram}`;
-    case "facebook":
-      return `https://m.me/${merchant.contacts.facebook}`;
-  }
+  // ig.me/m.me can't prefill a message the way wa.me does — callers should
+  // copy `message` to the clipboard before opening `url` for those channels.
+  const url =
+    channel === "whatsapp"
+      ? `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`
+      : channel === "instagram"
+        ? `https://ig.me/m/${merchant.contacts.instagram}`
+        : `https://m.me/${merchant.contacts.facebook}`;
+  return { url, message: msg };
 }
 
 /** Pre-filled order message for a multi-item cart checkout. */
@@ -52,6 +55,7 @@ export function cartOrderLink(
   items: { name: string; size: string | null; qty: number; unitPrice: number }[],
   opts: { name: string; phone: string; notes: string },
   channel: Exclude<OrderChannel, "direct">,
+  reference: string,
 ) {
   const total = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
   const lines = [
@@ -66,20 +70,20 @@ export function cartOrderLink(
     ``,
     `Total: ${formatKes(total)}`,
     ``,
+    `Ref: ${reference}`,
     `Name: ${opts.name}`,
     `Phone: ${opts.phone}`,
     opts.notes ? `Notes: ${opts.notes}` : null,
   ].filter((l): l is string => l !== null);
   const msg = lines.join("\n");
 
-  switch (channel) {
-    case "whatsapp":
-      return `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`;
-    case "instagram":
-      return `https://ig.me/m/${merchant.contacts.instagram}`;
-    case "facebook":
-      return `https://m.me/${merchant.contacts.facebook}`;
-  }
+  const url =
+    channel === "whatsapp"
+      ? `https://wa.me/${merchant.contacts.whatsapp}?text=${encodeURIComponent(msg)}`
+      : channel === "instagram"
+        ? `https://ig.me/m/${merchant.contacts.instagram}`
+        : `https://m.me/${merchant.contacts.facebook}`;
+  return { url, message: msg };
 }
 
 export function merchantChatLink(merchant: Merchant) {

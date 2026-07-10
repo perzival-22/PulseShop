@@ -14,13 +14,31 @@ export interface Credentials {
   password: string;
 }
 
-export interface SignupInput {
+/**
+ * Thrown by signup() / signupShopper() when Supabase requires the user to
+ * confirm their email before a session exists (signUp() returns a user but a
+ * null session). Callers must not treat this as a live login.
+ */
+export class EmailConfirmationRequiredError extends Error {
+  constructor(public readonly email: string) {
+    super("Email confirmation required before signing in");
+    this.name = "EmailConfirmationRequiredError";
+  }
+}
+
+/** The shop-profile fields, shared by full email/password signup and the
+ * post-Google "set up your shop" onboarding step (which has no email/password
+ * of its own — the account already exists). */
+export interface ShopDetailsInput {
   shopName: string;
   shopSlug: string;
-  email: string;
-  password: string;
   city: string;
   socials: { whatsapp: string; instagram: string; facebook: string };
+}
+
+export interface SignupInput extends ShopDetailsInput {
+  email: string;
+  password: string;
 }
 
 /** Shopper signup — no shop, just an identity for following/favorites. */
@@ -42,6 +60,8 @@ export interface AuthService {
   logout(): Promise<void>;
   /** Change the signed-in user's account email. */
   updateEmail(email: string): Promise<void>;
+  /** Sends a password-reset email. */
+  resetPassword(email: string): Promise<void>;
 }
 
 /** Editable merchant/shop profile fields. All optional — patch semantics. */
@@ -104,6 +124,19 @@ export interface FollowService {
   unfollow(merchantId: string): Promise<void>;
 }
 
+/**
+ * Server sync for signed-in users' favorites, mirroring FollowService. The
+ * local `stores/favorites.ts` store stays the fast, always-available cache
+ * (guests get device-local favorites only); this lets a signed-in shopper's
+ * favorites follow them to a new device instead of living only in
+ * localStorage.
+ */
+export interface FavoritesService {
+  listFavorites(): Promise<string[]>;
+  addFavorite(productId: string): Promise<void>;
+  removeFavorite(productId: string): Promise<void>;
+}
+
 export interface PaymentService {
   payWithMpesa(phone: string, amount: number): Promise<PaymentResult>;
   payWithPaypal(amount: number): Promise<PaymentResult>;
@@ -113,6 +146,8 @@ export interface PaymentService {
 export interface StorageService {
   /** Upload an image and return a URL usable in an <img src>. `folder` groups files. */
   uploadImage(file: File, folder: string): Promise<string>;
+  /** Best-effort delete of a previously-uploaded image (e.g. replacing an avatar/banner). */
+  deleteImage(url: string): Promise<void>;
 }
 
 export interface Services {
@@ -120,6 +155,7 @@ export interface Services {
   products: ProductService;
   orders: OrderService;
   follows: FollowService;
+  favorites: FavoritesService;
   payments: PaymentService;
   storage: StorageService;
 }

@@ -2,35 +2,36 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Input } from "@/components/ui/Input";
-import { services } from "@/services";
-import { EmailConfirmationRequiredError } from "@/services/types";
+import { completeMerchantOnboarding, getCurrentUser } from "@/services/api/auth";
 import { refineShopSocials, shopDetailsFields } from "@/lib/shopDetailsSchema";
 import { slugify } from "@/lib/slug";
 import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
 import { AuthShell } from "./AuthShell";
-import { GoogleButton } from "./GoogleButton";
 
-const schema = z
-  .object({
-    ...shopDetailsFields,
-    email: z.string().email("Enter a valid email"),
-    password: z.string().min(6, "At least 6 characters"),
-  })
-  .superRefine(refineShopSocials);
-
+const schema = z.object(shopDetailsFields).superRefine(refineShopSocials);
 type FormValues = z.infer<typeof schema>;
 
-export function SignupPage() {
+/**
+ * Post-Google "set up your shop" step. Reached from AuthCallbackPage when a
+ * merchant-intent Google sign-in belongs to a brand-new account with no
+ * merchant profile yet — Google can't supply shop name/slug/city/socials, so
+ * we collect them here before creating the merchants row.
+ */
+export function ShopDetailsOnboardingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const push = useToasts((s) => s.push);
   const setSession = useAuth((s) => s.setSession);
   const [slugEdited, setSlugEdited] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const prefillName = (location.state as { prefillName?: string } | null)?.prefillName ?? "";
 
   const {
     register,
@@ -40,61 +41,67 @@ export function SignupPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { shopName: "", slug: "", email: "", password: "", city: "", whatsapp: "" },
+    defaultValues: { shopName: prefillName, slug: "", city: "", whatsapp: "", instagram: "", facebook: "" },
   });
 
   const shopName = watch("shopName");
   const slug = watch("slug");
 
-  // Auto-fill the link from the shop name until the seller edits it themselves.
   useEffect(() => {
     if (!slugEdited) setValue("slug", slugify(shopName));
   }, [shopName, slugEdited, setValue]);
 
+  // Reached without a live session (e.g. direct nav) → send to login. Already
+  // a merchant (e.g. re-visited after finishing setup) → skip straight in.
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUser().then((user) => {
+      if (cancelled) return;
+      if (!user) {
+        navigate("/login", { replace: true });
+        return;
+      }
+      if (user.accountType === "merchant") {
+        setSession(user);
+        navigate("/dashboard/inventory", { replace: true });
+        return;
+      }
+      setChecking(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, setSession]);
+
   const onSubmit = handleSubmit(async (data) => {
     try {
-      const user = await services.auth.signup({
+      const user = await completeMerchantOnboarding({
         shopName: data.shopName,
         shopSlug: data.slug,
-        email: data.email,
-        password: data.password,
         city: data.city,
-        socials: {
-          whatsapp: data.whatsapp,
-          instagram: data.instagram ?? "",
-          facebook: data.facebook ?? "",
-        },
+        socials: { whatsapp: data.whatsapp ?? "", instagram: data.instagram ?? "", facebook: data.facebook ?? "" },
       });
       setSession(user);
       push(`${user.shopName} is live 🎉`, "success");
       navigate("/dashboard/inventory");
-    } catch (err) {
-      if (err instanceof EmailConfirmationRequiredError) {
-        push("Check your email to confirm your account, then log in", "success");
-        navigate("/login");
-        return;
-      }
-      push("Couldn't create your shop. Please try again.", "danger");
+    } catch {
+      push("Couldn't set up your shop. Please try again.", "danger");
     }
   });
 
+  if (checking) {
+    return (
+      <div className="app-surface flex min-h-dvh flex-col items-center justify-center gap-3 px-5">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <AuthShell
-      title="Create your shop"
-      subtitle="Set up your storefront and connect the apps you sell on."
-      footer={
-        <>
-          Already have a shop?{" "}
-          <Link to="/login" className="font-bold text-primary">
-            Log in
-          </Link>
-          <br />
-          Just here to shop?{" "}
-          <Link to="/signup/shopper" className="font-bold text-primary">
-            Create a shopper account
-          </Link>
-        </>
-      }
+      title="Set up your shop"
+      subtitle="Almost there — just the shop details, then you're live."
+      footer={null}
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <Input
@@ -116,32 +123,7 @@ export function SignupPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="City"
-            placeholder="Nairobi"
-            error={errors.city?.message}
-            {...register("city")}
-          />
-          <Input
-            label="Email"
-            type="email"
-            inputMode="email"
-            placeholder="you@shop.com"
-            autoComplete="email"
-            error={errors.email?.message}
-            {...register("email")}
-          />
-        </div>
-
-        <Input
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
+        <Input label="City" placeholder="Nairobi" error={errors.city?.message} {...register("city")} />
 
         <div className="rounded-card border border-white/60 bg-white/50 p-4">
           <p className="text-sm font-bold text-ink">Link your socials</p>
@@ -181,12 +163,6 @@ export function SignupPage() {
           Create shop
         </Button>
       </form>
-      <div className="my-4 flex items-center gap-3 text-xs font-semibold text-muted">
-        <div className="h-px flex-1 bg-white/60" />
-        or
-        <div className="h-px flex-1 bg-white/60" />
-      </div>
-      <GoogleButton intent="merchant" label="Continue with Google" />
     </AuthShell>
   );
 }
