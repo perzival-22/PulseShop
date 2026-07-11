@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router";
 import { z } from "zod";
 import { MobileShell } from "@/components/layout/MobileShell";
+import { ProductImage } from "@/components/product/ProductImage";
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
@@ -198,7 +199,7 @@ export function CheckoutPage() {
               key={`${item.productId}-${item.size ?? "one"}`}
               className="flex items-center gap-3"
             >
-              <img src={item.image} alt={item.name} className="size-12 rounded-lg object-cover" />
+              <ProductImage src={item.image} alt={item.name} className="size-12 rounded-lg object-cover" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-ink">{item.name}</p>
                 <p className="text-xs text-muted">

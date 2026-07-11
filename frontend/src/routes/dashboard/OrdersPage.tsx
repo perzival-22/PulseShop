@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Loader2, Package, ShoppingCart } from "lucide-react";
 import { useMemo } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { ProductImage } from "@/components/product/ProductImage";
 import { Button } from "@/components/ui/Button";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -146,13 +147,7 @@ export function OrdersDashboardPage() {
                 <div className="mt-4 space-y-2 border-y border-stone-100 py-3">
                   {o.items.map((it, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      {it.image ? (
-                        <img src={it.image} alt="" className="size-10 rounded-lg object-cover" />
-                      ) : (
-                        <div className="flex size-10 items-center justify-center rounded-lg bg-stone-100">
-                          <Package className="size-4 text-muted" />
-                        </div>
-                      )}
+                      <ProductImage src={it.image} alt="" className="size-10 rounded-lg object-cover" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-ink">{it.productName}</p>
                         <p className="text-xs text-muted">

@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { PRODUCT_IMAGE_FALLBACK } from "@/lib/productImage";
+import { ProductImage } from "./ProductImage";
 
 export function Gallery({
   images,
@@ -19,6 +21,7 @@ export function Gallery({
    *  when a page wants thumbnails at some breakpoints but not others. */
   thumbnailsClassName?: string;
 }) {
+  const safeImages = images.length > 0 ? images : [PRODUCT_IMAGE_FALLBACK];
   const [active, setActive] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -43,8 +46,8 @@ export function Gallery({
           onScroll={onScroll}
           className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto"
         >
-          {images.map((src, i) => (
-            <img
+          {safeImages.map((src, i) => (
+            <ProductImage
               key={src}
               src={src}
               alt={`${alt} — image ${i + 1}`}
@@ -52,9 +55,9 @@ export function Gallery({
             />
           ))}
         </div>
-        {images.length > 1 && (
+        {safeImages.length > 1 && (
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-            {images.map((_, i) => (
+            {safeImages.map((_, i) => (
               <button
                 key={i}
                 type="button"
@@ -70,9 +73,9 @@ export function Gallery({
         )}
       </div>
 
-      {thumbnails && images.length > 1 && (
+      {thumbnails && safeImages.length > 1 && (
         <div className={cn("no-scrollbar flex gap-2 overflow-x-auto", thumbnailsClassName)}>
-          {images.map((src, i) => (
+          {safeImages.map((src, i) => (
             <button
               key={src}
               type="button"
@@ -83,7 +86,7 @@ export function Gallery({
                 i === active ? "ring-primary" : "ring-transparent",
               )}
             >
-              <img src={src} alt="" className="size-full object-cover" />
+              <ProductImage src={src} alt="" className="size-full object-cover" />
             </button>
           ))}
         </div>

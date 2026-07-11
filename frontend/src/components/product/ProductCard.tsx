@@ -4,12 +4,14 @@ import { Link } from "react-router";
 import type { Product } from "@/types";
 import { cn } from "@/lib/utils";
 import { discountedPrice, formatKes } from "@/lib/currency";
+import { productImageSrc } from "@/lib/productImage";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Modal";
 import { useFavoriteToggle } from "@/hooks/useFavorites";
 import { useCart } from "@/stores/cart";
 import { useFavorites } from "@/stores/favorites";
 import { useToasts } from "@/stores/toast";
+import { ProductImage } from "./ProductImage";
 import { SizeSelector } from "./SizeSelector";
 import { StockBadge } from "./StockBadge";
 
@@ -35,7 +37,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
       productId: product.id,
       shopSlug: product.shopSlug,
       name: product.name,
-      image: product.images[0],
+      image: productImageSrc(product.images),
       unitPrice: finalPrice,
       size,
       stockQty: product.stockQty,
@@ -70,7 +72,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
         className={cn("block", soldOut && "cursor-default")}
       >
         <div className="relative aspect-[3/4] overflow-hidden bg-stone-100">
-          <img
+          <ProductImage
             src={product.images[0]}
             alt={product.name}
             loading="lazy"
@@ -136,7 +138,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
         <Sheet open={sizeSheetOpen} onOpenChange={setSizeSheetOpen} title="Select a size">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <img
+              <ProductImage
                 src={product.images[0]}
                 alt={product.name}
                 className="size-14 rounded-xl object-cover"

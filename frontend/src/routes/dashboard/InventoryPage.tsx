@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { ProductImage } from "@/components/product/ProductImage";
 import { ShareMenu } from "@/components/product/ShareMenu";
 import { StockAdjuster } from "@/components/product/StockAdjuster";
 import { StockBadge } from "@/components/product/StockBadge";
@@ -332,7 +333,7 @@ export function InventoryPage() {
                   </td>
                   <td className="px-2 py-3">
                     <div className="flex items-center gap-3">
-                      <img src={p.images[0]} alt="" className="size-10 rounded-lg object-cover" />
+                      <ProductImage src={p.images[0]} alt="" className="size-10 rounded-lg object-cover" />
                       <div>
                         <p className="font-semibold text-ink">{p.name}</p>
                         <p className="text-xs text-muted">{daysAgoLabel(p.createdAt)}</p>

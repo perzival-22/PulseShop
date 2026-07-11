@@ -13,8 +13,10 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { discountedPrice, formatKes } from "@/lib/currency";
 import { orderLink } from "@/lib/deeplinks";
 import { isValidPhone } from "@/lib/phone";
+import { productImageSrc } from "@/lib/productImage";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
+import { ProductImage } from "@/components/product/ProductImage";
 import type { PaymentMethod } from "@/types";
 import { useOrderStore } from "@/stores/order";
 import { useOrderHistory } from "@/stores/orderHistory";
@@ -142,7 +144,7 @@ export function OrderPage() {
       reference,
       productId: product.id,
       productName: product.name,
-      image: product.images[0],
+      image: productImageSrc(product.images),
       size: selectedSize,
       qty,
       totalKes: total,
@@ -210,7 +212,7 @@ export function OrderPage() {
       <div className="space-y-4 px-4 pb-10 pt-1">
         {/* product summary */}
         <div className="flex gap-3 rounded-card bg-card p-3 shadow-soft">
-          <img
+          <ProductImage
             src={product.images[0]}
             alt={product.name}
             className="size-20 rounded-xl object-cover"

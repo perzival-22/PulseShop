@@ -35,17 +35,17 @@ export function FavoritesPage() {
   );
 
   return (
-    <MobileShell homeTo={home}>
-      <header className="px-4 pt-5">
-        <h1 className="text-xl font-extrabold text-ink">Favorites</h1>
+    <MobileShell homeTo={home} wide>
+      <header className="px-4 pt-5 lg:px-6 lg:pt-6">
+        <h1 className="text-xl font-extrabold text-ink lg:text-2xl">Favorites</h1>
         <p className="text-sm text-muted">
           {favorites.length} saved {favorites.length === 1 ? "item" : "items"}
         </p>
       </header>
 
-      <section className="px-4 py-4">
+      <section className="px-4 py-4 lg:px-6">
         {productsQ.isLoading && favorites.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: Math.min(favorites.length, 4) }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
@@ -93,7 +93,7 @@ function FavGrid({
   onExit: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
       {items.map((p) => (
         <div
           key={p.id}

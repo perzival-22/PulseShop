@@ -4,6 +4,7 @@ import { Database, ImagePlus, Loader2, Minus, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { ProductImage } from "@/components/product/ProductImage";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -212,7 +213,7 @@ export function ProductModal({
           <div className="flex flex-wrap gap-2">
             {images.map((src, i) => (
               <div key={i} className="relative">
-                <img src={src} alt="" className="size-16 rounded-xl object-cover" />
+                <ProductImage src={src} alt="" className="size-16 rounded-xl object-cover" />
                 <button
                   type="button"
                   aria-label="Remove image"

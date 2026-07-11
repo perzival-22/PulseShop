@@ -19,6 +19,7 @@ import type {
 import { statusForQty } from "@/lib/constants";
 import { discountedPrice } from "@/lib/currency";
 import { fileToDataUrl } from "@/lib/image";
+import { productImageSrc } from "@/lib/productImage";
 import { MERCHANT, PRODUCTS } from "./data";
 
 const LATENCY = 300;
@@ -82,7 +83,7 @@ function seedOrders(): MerchantOrder[] {
     const unit = discountedPrice(p.priceKes, p.discountPct);
     return {
       productName: p.name,
-      image: p.images[0] ?? "",
+      image: productImageSrc(p.images),
       size,
       qty,
       unitPriceKes: unit,
@@ -318,7 +319,7 @@ export const mockServices: Services = {
             items: [
               {
                 productName: p.name,
-                image: p.images[0] ?? "",
+                image: productImageSrc(p.images),
                 size: draft.size,
                 qty: draft.qty,
                 unitPriceKes: unit,
@@ -342,7 +343,7 @@ export const mockServices: Services = {
         const unit = discountedPrice(p.priceKes, p.discountPct);
         return [{
           productName: p.name,
-          image: p.images[0] ?? "",
+          image: productImageSrc(p.images),
           size: item.size,
           qty: item.qty,
           unitPriceKes: unit,

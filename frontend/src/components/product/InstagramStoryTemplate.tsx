@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { discountedPrice, formatKes } from "@/lib/currency";
+import { ProductImage } from "@/components/product/ProductImage";
 import type { Product } from "@/types";
 
 const WIDTH = 1080;
@@ -50,7 +51,7 @@ export const InstagramStoryTemplate = forwardRef<HTMLDivElement, { product: Prod
             backgroundColor: "#ffffff",
           }}
         >
-          <img
+          <ProductImage
             src={product.images[0]}
             crossOrigin="anonymous"
             alt=""

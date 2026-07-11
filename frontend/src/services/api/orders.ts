@@ -7,6 +7,7 @@ import type {
   PaymentStatus,
 } from "@/types";
 import type { OrderService } from "../types";
+import { productImageSrc } from "@/lib/productImage";
 import { requireUserId, supabase } from "./client";
 
 interface OrderItemRow {
@@ -48,7 +49,7 @@ function toMerchantOrder(row: OrderRow): MerchantOrder {
     placedAt: row.placed_at,
     items: (row.order_items ?? []).map((i) => ({
       productName: i.product_name,
-      image: i.image ?? "",
+      image: productImageSrc(i.image ? [i.image] : []),
       size: i.size,
       qty: i.qty,
       unitPriceKes: i.unit_price_kes,

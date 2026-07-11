@@ -1,6 +1,7 @@
 import { Package } from "lucide-react";
 import { Link } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
+import { ProductImage } from "@/components/product/ProductImage";
 import { Badge } from "@/components/ui/Badge";
 import { formatKes } from "@/lib/currency";
 import { useOrderHistory } from "@/stores/orderHistory";
@@ -11,17 +12,17 @@ export function OrdersPage() {
   const home = useShopHome();
 
   return (
-    <MobileShell homeTo={home}>
-      <header className="px-4 pt-5">
-        <h1 className="text-xl font-extrabold text-ink">Orders</h1>
+    <MobileShell homeTo={home} wide>
+      <header className="px-4 pt-5 lg:px-6 lg:pt-6">
+        <h1 className="text-xl font-extrabold text-ink lg:text-2xl">Orders</h1>
         <p className="text-sm text-muted">
           {orders.length} {orders.length === 1 ? "order" : "orders"} placed
         </p>
       </header>
 
-      <section className="space-y-3 px-4 py-4">
+      <section className="space-y-3 px-4 py-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-6 xl:grid-cols-3">
         {orders.length === 0 ? (
-          <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 text-center">
+          <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 text-center lg:col-span-full">
             <div className="flex size-20 items-center justify-center rounded-full bg-card shadow-soft">
               <Package className="size-9 text-stone-300" />
             </div>
@@ -44,7 +45,7 @@ export function OrdersPage() {
               key={`${o.reference}-${o.productId}-${o.size ?? "one"}`}
               className="flex gap-3 rounded-card bg-card p-3 shadow-soft"
             >
-              <img src={o.image} alt={o.productName} className="size-16 rounded-xl object-cover" />
+              <ProductImage src={o.image} alt={o.productName} className="size-16 rounded-xl object-cover" />
               <div className="flex flex-1 flex-col justify-between py-0.5">
                 <div className="flex items-start justify-between gap-2">
                   <div>

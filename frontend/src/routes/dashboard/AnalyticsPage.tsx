@@ -3,6 +3,7 @@ import { AlertTriangle, DollarSign, Receipt, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { ProductImage } from "@/components/product/ProductImage";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatKes } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -147,11 +148,7 @@ export function AnalyticsPage() {
                   {a.topProducts.map((p, i) => (
                     <div key={p.name} className="flex items-center gap-3">
                       <span className="w-5 text-sm font-bold text-muted">{i + 1}</span>
-                      {p.image ? (
-                        <img src={p.image} alt="" className="size-10 rounded-lg object-cover" />
-                      ) : (
-                        <div className="size-10 rounded-lg bg-stone-100" />
-                      )}
+                      <ProductImage src={p.image} alt="" className="size-10 rounded-lg object-cover" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
                         <p className="text-xs text-muted">{p.units} sold</p>

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Package, ShoppingCart, Store, Users } from "lucide-react";
 import { Link } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
+import { Logo } from "@/components/common/Logo";
 import { FollowButton } from "@/components/shop/FollowButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { services } from "@/services";
@@ -15,13 +16,14 @@ export function ShopsPage() {
   const shopsQ = useQuery({ queryKey: ["shops"], queryFn: services.follows.listShops });
 
   return (
-    <MobileShell>
-      <header className="glass-header sticky top-0 z-30 px-4 py-4">
-        <h1 className="text-lg font-extrabold text-ink">Shops</h1>
-        <p className="text-xs font-medium text-muted">Follow sellers to keep up with their stores</p>
+    <MobileShell wide>
+      <header className="glass-header sticky top-0 z-30 flex flex-col items-center px-4 py-5 text-center lg:px-6 lg:py-7">
+        <Logo size={44} className="mb-2" />
+        <h1 className="text-lg font-extrabold text-ink lg:text-2xl">Shops</h1>
+        <p className="text-xs font-medium text-muted lg:text-sm">Follow sellers to keep up with their stores</p>
       </header>
 
-      <div className="space-y-3 px-4 pb-6 pt-2">
+      <div className="space-y-3 px-4 pb-6 pt-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-6 lg:pt-4 xl:grid-cols-3">
         {shopsQ.isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 rounded-card bg-card p-3 shadow-soft">
@@ -34,7 +36,7 @@ export function ShopsPage() {
             </div>
           ))
         ) : shopsQ.isError ? (
-          <div className="rounded-card bg-card p-8 text-center shadow-soft">
+          <div className="rounded-card bg-card p-8 text-center shadow-soft lg:col-span-full">
             <p className="font-semibold text-ink">Couldn't load shops</p>
             <button
               type="button"
@@ -45,7 +47,7 @@ export function ShopsPage() {
             </button>
           </div>
         ) : (shopsQ.data ?? []).length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-card bg-card p-8 text-center shadow-soft">
+          <div className="flex flex-col items-center gap-3 rounded-card bg-card p-8 text-center shadow-soft lg:col-span-full">
             <div className="flex size-14 items-center justify-center rounded-full bg-stone-100">
               <Store className="size-7 text-muted" />
             </div>
