@@ -1,9 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Package, ShoppingCart, Store, Users } from "lucide-react";
 import { Link } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
+import { DesktopQuickNav } from "@/components/layout/DesktopQuickNav";
 import { Logo } from "@/components/common/Logo";
 import { FollowButton } from "@/components/shop/FollowButton";
+import { ProductImage } from "@/components/product/ProductImage";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { services } from "@/services";
 
@@ -14,13 +16,32 @@ import { services } from "@/services";
  */
 export function ShopsPage() {
   const shopsQ = useQuery({ queryKey: ["shops"], queryFn: services.follows.listShops });
+  const shops = shopsQ.data ?? [];
+
+  // A few recent-product thumbnails per shop, so buyers see what's on offer
+  // before tapping in — skipped for shops with nothing listed yet.
+  const previewQueries = useQueries({
+    queries: shops.map((shop) => ({
+      queryKey: ["shop-products-preview", shop.id],
+      queryFn: () => services.products.listShopProducts(shop.id),
+      enabled: shop.stats.products > 0,
+      staleTime: 60_000,
+    })),
+  });
 
   return (
     <MobileShell wide>
-      <header className="glass-header sticky top-0 z-30 flex flex-col items-center px-4 py-5 text-center lg:px-6 lg:py-7">
-        <Logo size={44} className="mb-2" />
-        <h1 className="text-lg font-extrabold text-ink lg:text-2xl">Shops</h1>
-        <p className="text-xs font-medium text-muted lg:text-sm">Follow sellers to keep up with their stores</p>
+      <header className="glass-header sticky top-0 z-30 flex flex-col items-center px-4 py-5 text-center lg:flex-row lg:items-center lg:justify-between lg:px-6 lg:py-4 lg:text-left">
+        <div className="flex flex-col items-center lg:flex-row lg:items-center lg:gap-3">
+          <Logo size={44} className="mb-2 lg:mb-0" />
+          <div>
+            <h1 className="text-lg font-extrabold text-ink lg:text-xl">Shops</h1>
+            <p className="text-xs font-medium text-muted lg:text-sm">
+              Follow sellers to keep up with their stores
+            </p>
+          </div>
+        </div>
+        <DesktopQuickNav />
       </header>
 
       <div className="space-y-3 px-4 pb-6 pt-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-6 lg:pt-4 xl:grid-cols-3">
@@ -55,7 +76,10 @@ export function ShopsPage() {
             <p className="text-sm text-muted">Be the first — create your shop on PulseShop.</p>
           </div>
         ) : (
-          (shopsQ.data ?? []).map((shop) => (
+          shops.map((shop, i) => {
+            const previewQ = previewQueries[i];
+            const preview = (previewQ?.data ?? []).slice(0, 3);
+            return (
             <div key={shop.id} className="rounded-card bg-card p-3 shadow-soft">
               <div className="flex items-center gap-3">
                 {/* profile — tap to open the shop */}
@@ -87,6 +111,24 @@ export function ShopsPage() {
                 <p className="mt-2.5 line-clamp-2 text-xs text-muted">{shop.bio}</p>
               )}
 
+              {shop.stats.products > 0 && (
+                <div className="mt-2.5 flex gap-2">
+                  {previewQ?.isLoading
+                    ? Array.from({ length: Math.min(shop.stats.products, 3) }).map((_, k) => (
+                        <Skeleton key={k} className="size-14 shrink-0 rounded-lg" />
+                      ))
+                    : preview.map((p) => (
+                        <Link key={p.id} to={`/product/${p.id}`} className="shrink-0">
+                          <ProductImage
+                            src={p.images[0]}
+                            alt={p.name}
+                            className="size-14 rounded-lg object-cover"
+                          />
+                        </Link>
+                      ))}
+                </div>
+              )}
+
               <div className="mt-2.5 flex items-center gap-4 border-t border-stone-100 pt-2.5 text-xs text-muted">
                 <span className="flex items-center gap-1">
                   <Package className="size-3.5" />
@@ -102,7 +144,8 @@ export function ShopsPage() {
                 </span>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </MobileShell>

@@ -404,8 +404,13 @@ export function ProductDetailPage() {
                 )}
 
                 <div className="flex items-center gap-3">
-                  <Button size="lg" className="flex-1" onClick={orderViaChannel} disabled={!desktopChannel}>
-                    {desktopChannelLabel ? `Order via ${desktopChannelLabel}` : "Order now"}
+                  <Button
+                    size="lg"
+                    className="max-w-sm flex-1"
+                    onClick={orderViaChannel}
+                    disabled={!desktopChannel}
+                  >
+                    Order Now
                   </Button>
                   <Button variant="outline" size="lg" onClick={handleAddToCart} aria-label="Add to cart">
                     <ShoppingBag className="size-5" />

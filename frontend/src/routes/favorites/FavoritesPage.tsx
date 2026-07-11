@@ -3,6 +3,7 @@ import { Heart } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
+import { DesktopQuickNav } from "@/components/layout/DesktopQuickNav";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
@@ -36,11 +37,14 @@ export function FavoritesPage() {
 
   return (
     <MobileShell homeTo={home} wide>
-      <header className="px-4 pt-5 lg:px-6 lg:pt-6">
-        <h1 className="text-xl font-extrabold text-ink lg:text-2xl">Favorites</h1>
-        <p className="text-sm text-muted">
-          {favorites.length} saved {favorites.length === 1 ? "item" : "items"}
-        </p>
+      <header className="flex items-center justify-between px-4 pt-5 lg:px-6 lg:pt-6">
+        <div>
+          <h1 className="text-xl font-extrabold text-ink lg:text-2xl">Favorites</h1>
+          <p className="text-sm text-muted">
+            {favorites.length} saved {favorites.length === 1 ? "item" : "items"}
+          </p>
+        </div>
+        <DesktopQuickNav />
       </header>
 
       <section className="px-4 py-4 lg:px-6">

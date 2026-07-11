@@ -1,6 +1,7 @@
 import { Package } from "lucide-react";
 import { Link } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
+import { DesktopQuickNav } from "@/components/layout/DesktopQuickNav";
 import { ProductImage } from "@/components/product/ProductImage";
 import { Badge } from "@/components/ui/Badge";
 import { formatKes } from "@/lib/currency";
@@ -13,11 +14,14 @@ export function OrdersPage() {
 
   return (
     <MobileShell homeTo={home} wide>
-      <header className="px-4 pt-5 lg:px-6 lg:pt-6">
-        <h1 className="text-xl font-extrabold text-ink lg:text-2xl">Orders</h1>
-        <p className="text-sm text-muted">
-          {orders.length} {orders.length === 1 ? "order" : "orders"} placed
-        </p>
+      <header className="flex items-center justify-between px-4 pt-5 lg:px-6 lg:pt-6">
+        <div>
+          <h1 className="text-xl font-extrabold text-ink lg:text-2xl">Orders</h1>
+          <p className="text-sm text-muted">
+            {orders.length} {orders.length === 1 ? "order" : "orders"} placed
+          </p>
+        </div>
+        <DesktopQuickNav />
       </header>
 
       <section className="space-y-3 px-4 py-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:px-6 xl:grid-cols-3">

@@ -1,6 +1,7 @@
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { MobileShell } from "@/components/layout/MobileShell";
+import { DesktopQuickNav } from "@/components/layout/DesktopQuickNav";
 import { ProductImage } from "@/components/product/ProductImage";
 import { Button } from "@/components/ui/Button";
 import { formatKes } from "@/lib/currency";
@@ -17,9 +18,10 @@ export function CartPage() {
 
   if (items.length === 0) {
     return (
-      <MobileShell homeTo={home}>
-        <header className="glass-header sticky top-0 z-30 px-4 py-4">
-          <h1 className="text-lg font-extrabold text-ink">Your Cart</h1>
+      <MobileShell homeTo={home} wide>
+        <header className="glass-header sticky top-0 z-30 flex items-center justify-between px-4 py-4 lg:px-6">
+          <h1 className="text-lg font-extrabold text-ink lg:text-2xl">Your Cart</h1>
+          <DesktopQuickNav />
         </header>
         <div className="flex min-h-[60dvh] flex-col items-center justify-center gap-3 p-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-full bg-stone-100">
@@ -38,10 +40,13 @@ export function CartPage() {
   return (
     <MobileShell homeTo={home} wide>
       <header className="glass-header sticky top-0 z-30 flex items-center justify-between px-4 py-4 lg:px-6">
-        <h1 className="text-lg font-extrabold text-ink lg:text-2xl">Your Cart</h1>
-        <span className="text-sm font-semibold text-muted">
-          {items.length} {items.length === 1 ? "item" : "items"}
-        </span>
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-extrabold text-ink lg:text-2xl">Your Cart</h1>
+          <span className="text-sm font-semibold text-muted">
+            {items.length} {items.length === 1 ? "item" : "items"}
+          </span>
+        </div>
+        <DesktopQuickNav />
       </header>
 
       <div className="px-4 pb-6 pt-1 lg:flex lg:items-start lg:gap-8 lg:px-6 lg:pt-4">
