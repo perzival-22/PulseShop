@@ -305,6 +305,18 @@ export function ProductDetailPage() {
           {/* info + desktop order panel */}
           <div className="mt-3.5 space-y-3.5 lg:mt-0 lg:space-y-4">
             <nav className="flex items-center gap-1 text-xs font-medium text-muted">
+              {/* Shoppers reach a product from within one shop; give them a way
+                  back to the full shops list (the product page hides the bottom
+                  nav, so there's no other route to it). Hidden for a merchant
+                  previewing their own product — the shops list isn't their home. */}
+              {!ownsProduct && (
+                <>
+                  <Link to="/shops" className="hover:text-primary">
+                    Shops
+                  </Link>
+                  <ChevronRight className="size-3.5" />
+                </>
+              )}
               <Link to={home} className="hover:text-primary">
                 Store
               </Link>

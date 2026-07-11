@@ -4,6 +4,12 @@ import type { OrderChannel, PaymentMethod } from "@/types";
 
 export interface PlacedOrder {
   reference: string;
+  /**
+   * The order's secret access key (from place_order). For a guest this is the
+   * ONLY way to look the order up again — it lives here and nowhere else on the
+   * device. Optional so orders saved before this field existed still load.
+   */
+  accessToken?: string;
   productId: string;
   productName: string;
   image: string;

@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { authErrorMessage } from "@/lib/authErrors";
 import { services } from "@/services";
 import { EmailConfirmationRequiredError } from "@/services/types";
 import { useAuth } from "@/stores/auth";
@@ -44,7 +45,7 @@ export function ShopperSignupPage() {
         navigate("/login");
         return;
       }
-      push("Couldn't create your account. Please try again.", "danger");
+      push(authErrorMessage(err, "signup"), "danger");
     }
   });
 

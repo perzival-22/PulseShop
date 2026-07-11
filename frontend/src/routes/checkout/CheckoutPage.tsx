@@ -69,6 +69,7 @@ export function CheckoutPage() {
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [payOpen, setPayOpen] = useState(false);
   const [pendingReference, setPendingReference] = useState<string | null>(null);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [pendingNotify, setPendingNotify] = useState<{
     channel: Channel;
     label: string;
@@ -118,11 +119,17 @@ export function CheckoutPage() {
 
   const total = cartSubtotal(items);
 
-  const recordOrders = (reference: string, paymentMethod: PaymentMethod | null, ch: Channel | "direct") => {
+  const recordOrders = (
+    reference: string,
+    accessToken: string | null,
+    paymentMethod: PaymentMethod | null,
+    ch: Channel | "direct",
+  ) => {
     const placedAt = new Date().toISOString();
     for (const item of items) {
       addOrder({
         reference,
+        accessToken: accessToken ?? undefined,
         productId: item.productId,
         productName: item.name,
         image: item.image,
@@ -157,8 +164,9 @@ export function CheckoutPage() {
     const data = getValues();
     saveCustomer({ name: data.name, phone: data.phone, notes: data.notes ?? "" });
     try {
-      const { reference } = await createOrder(data, "direct");
+      const { reference, accessToken } = await createOrder(data, "direct");
       setPendingReference(reference);
+      setPendingToken(accessToken);
       // Pre-build the seller notification for the chosen channel now, while
       // we still have the reference — PaymentSheet fires it automatically
       // once payment succeeds, so there's no separate "send order" step.
@@ -293,7 +301,7 @@ export function CheckoutPage() {
         notify={pendingNotify}
         onPaid={(method) => {
           if (!pendingReference) return;
-          recordOrders(pendingReference, method, channel);
+          recordOrders(pendingReference, pendingToken, method, channel);
           clearCart();
           navigate("/orders");
         }}

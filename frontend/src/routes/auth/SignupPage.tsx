@@ -9,6 +9,7 @@ import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/ui/Brand
 import { Input } from "@/components/ui/Input";
 import { services } from "@/services";
 import { EmailConfirmationRequiredError } from "@/services/types";
+import { authErrorMessage } from "@/lib/authErrors";
 import { refineShopSocials, shopDetailsFields } from "@/lib/shopDetailsSchema";
 import { slugify } from "@/lib/slug";
 import { useAuth } from "@/stores/auth";
@@ -74,7 +75,7 @@ export function SignupPage() {
         navigate("/login");
         return;
       }
-      push("Couldn't create your shop. Please try again.", "danger");
+      push(authErrorMessage(err, "signup"), "danger");
     }
   });
 

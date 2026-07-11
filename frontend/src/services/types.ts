@@ -3,9 +3,11 @@ import type {
   CartOrderDraft,
   Merchant,
   MerchantOrder,
+  MyOrder,
   OrderDraft,
   PaymentResult,
   PaymentStatus,
+  PlacedOrderRef,
   Product,
 } from "@/types";
 
@@ -105,9 +107,10 @@ export interface ProductService {
 }
 
 export interface OrderService {
-  submitOrder(draft: OrderDraft): Promise<{ reference: string }>;
+  /** Places the order and returns its reference + secret access key. */
+  submitOrder(draft: OrderDraft): Promise<PlacedOrderRef>;
   /** Multi-item order from the cart checkout — one order, many line items. */
-  submitCartOrder(draft: CartOrderDraft): Promise<{ reference: string }>;
+  submitCartOrder(draft: CartOrderDraft): Promise<PlacedOrderRef>;
   /** Orders received by the signed-in merchant, newest first. */
   listOrders(): Promise<MerchantOrder[]>;
   /** Count of the signed-in merchant's orders still `pending` — for badges/UI
@@ -115,6 +118,13 @@ export interface OrderService {
   countPendingOrders(): Promise<number>;
   /** Update the payment status of one of the merchant's orders. */
   updateOrderStatus(orderId: string, paymentStatus: PaymentStatus): Promise<void>;
+  /** The signed-in shopper's OWN placed orders (RLS-scoped to customer_id),
+   * newest first. Empty for guests / when signed out. */
+  listMyOrders(): Promise<MyOrder[]>;
+  /** Look up a single order by its reference + secret access key — the path a
+   * guest (or anyone without the placing account) uses to track their order.
+   * Returns null when the reference/key don't match. */
+  lookupOrder(reference: string, accessToken: string): Promise<MyOrder | null>;
 }
 
 /**

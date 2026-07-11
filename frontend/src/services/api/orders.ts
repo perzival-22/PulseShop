@@ -1,10 +1,13 @@
 import type {
   CartOrderDraft,
   MerchantOrder,
+  MyOrder,
   OrderChannel,
   OrderDraft,
+  OrderLine,
   PaymentMethod,
   PaymentStatus,
+  PlacedOrderRef,
 } from "@/types";
 import type { OrderService } from "../types";
 import { productImageSrc } from "@/lib/productImage";
@@ -34,6 +37,17 @@ interface OrderRow {
   order_items: OrderItemRow[];
 }
 
+function toOrderLine(i: OrderItemRow): OrderLine {
+  return {
+    productName: i.product_name,
+    image: productImageSrc(i.image ? [i.image] : []),
+    size: i.size,
+    qty: i.qty,
+    unitPriceKes: i.unit_price_kes,
+    lineTotalKes: i.line_total_kes,
+  };
+}
+
 function toMerchantOrder(row: OrderRow): MerchantOrder {
   return {
     id: row.id,
@@ -47,14 +61,55 @@ function toMerchantOrder(row: OrderRow): MerchantOrder {
     subtotalKes: row.subtotal_kes,
     totalKes: row.total_kes,
     placedAt: row.placed_at,
-    items: (row.order_items ?? []).map((i) => ({
-      productName: i.product_name,
-      image: productImageSrc(i.image ? [i.image] : []),
-      size: i.size,
-      qty: i.qty,
-      unitPriceKes: i.unit_price_kes,
-      lineTotalKes: i.line_total_kes,
-    })),
+    items: (row.order_items ?? []).map(toOrderLine),
+  };
+}
+
+/** A row from the buyer's own-orders query — order + items + shop name join. */
+interface MyOrderRow extends OrderRow {
+  merchants: { name: string; handle: string } | null;
+}
+
+function toMyOrder(row: MyOrderRow): MyOrder {
+  return {
+    id: row.id,
+    reference: row.reference,
+    channel: row.channel,
+    paymentMethod: row.payment_method,
+    paymentStatus: row.payment_status,
+    subtotalKes: row.subtotal_kes,
+    totalKes: row.total_kes,
+    placedAt: row.placed_at,
+    shopName: row.merchants?.name ?? "",
+    shopSlug: row.merchants?.handle ?? "",
+    items: (row.order_items ?? []).map(toOrderLine),
+  };
+}
+
+/** The shape get_order_by_token() returns (snake_case, no merchant ids). */
+interface OrderTokenPayload {
+  id: string;
+  reference: string;
+  channel: OrderChannel;
+  payment_method: PaymentMethod | null;
+  payment_status: PaymentStatus;
+  subtotal_kes: number;
+  total_kes: number;
+  placed_at: string;
+  items: OrderItemRow[];
+}
+
+function tokenPayloadToMyOrder(p: OrderTokenPayload): MyOrder {
+  return {
+    id: p.id,
+    reference: p.reference,
+    channel: p.channel,
+    paymentMethod: p.payment_method,
+    paymentStatus: p.payment_status,
+    subtotalKes: p.subtotal_kes,
+    totalKes: p.total_kes,
+    placedAt: p.placed_at,
+    items: (p.items ?? []).map(toOrderLine),
   };
 }
 
@@ -71,7 +126,7 @@ async function placeOrder(
   channel: OrderChannel,
   payment: { method: PaymentMethod; status: PaymentStatus } | null,
   items: { productId: string; size: string | null; qty: number }[],
-): Promise<{ reference: string }> {
+): Promise<PlacedOrderRef> {
   const { data, error } = await supabase.rpc("place_order", {
     p_customer_name: customer.name,
     p_customer_phone: customer.phone,
@@ -81,19 +136,22 @@ async function placeOrder(
     p_items: items.map((i) => ({ product_id: i.productId, size: i.size, qty: i.qty })),
   });
   if (error) throw error;
-  const row = (Array.isArray(data) ? data[0] : data) as { reference: string } | undefined;
-  if (!row?.reference) throw new Error("Order was not created");
-  return { reference: row.reference };
+  // place_order() returns one row: (order_id, reference, access_token).
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { reference: string; access_token: string }
+    | undefined;
+  if (!row?.reference || !row?.access_token) throw new Error("Order was not created");
+  return { reference: row.reference, accessToken: row.access_token };
 }
 
 export const ordersApi: OrderService = {
-  async submitOrder(draft: OrderDraft): Promise<{ reference: string }> {
+  async submitOrder(draft: OrderDraft): Promise<PlacedOrderRef> {
     return placeOrder(draft.customer, draft.channel, draft.payment, [
       { productId: draft.productId, size: draft.size, qty: draft.qty },
     ]);
   },
 
-  async submitCartOrder(draft: CartOrderDraft): Promise<{ reference: string }> {
+  async submitCartOrder(draft: CartOrderDraft): Promise<PlacedOrderRef> {
     return placeOrder(draft.customer, draft.channel, draft.payment, draft.items);
   },
 
@@ -127,5 +185,29 @@ export const ordersApi: OrderService = {
       .eq("id", orderId)
       .eq("merchant_id", uid);
     if (error) throw error;
+  },
+
+  async listMyOrders(): Promise<MyOrder[]> {
+    const uid = await requireUserId();
+    // Explicit customer_id filter on top of the "orders customer read" RLS
+    // policy — so a merchant who also shops sees only what they bought here,
+    // not the orders they received.
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*, order_items(*), merchants(name, handle)")
+      .eq("customer_id", uid)
+      .order("placed_at", { ascending: false });
+    if (error) throw error;
+    return (data as MyOrderRow[]).map(toMyOrder);
+  },
+
+  async lookupOrder(reference: string, accessToken: string): Promise<MyOrder | null> {
+    const { data, error } = await supabase.rpc("get_order_by_token", {
+      p_reference: reference,
+      p_access_token: accessToken,
+    });
+    if (error) throw error;
+    if (!data) return null; // reference/key didn't match a real order
+    return tokenPayloadToMyOrder(data as OrderTokenPayload);
   },
 };

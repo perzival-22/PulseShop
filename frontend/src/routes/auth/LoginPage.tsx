@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { authErrorMessage } from "@/lib/authErrors";
 import { services } from "@/services";
 import { useAuth } from "@/stores/auth";
 import { useToasts } from "@/stores/toast";
@@ -80,11 +81,7 @@ export function LoginPage() {
           navigate("/shops");
         }
       } catch (err) {
-        if (err instanceof Error && /email not confirmed/i.test(err.message)) {
-          push("Please confirm your email first — check your inbox", "danger");
-          return;
-        }
-        push("Couldn't sign you in. Check your details and try again.", "danger");
+        push(authErrorMessage(err, "login"), "danger");
       } finally {
         setPendingRole(null);
       }

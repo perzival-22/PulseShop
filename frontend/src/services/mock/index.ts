@@ -3,9 +3,12 @@ import type {
   CartOrderDraft,
   Merchant,
   MerchantOrder,
+  MyOrder,
   OrderDraft,
+  OrderLine,
   PaymentResult,
   PaymentStatus,
+  PlacedOrderRef,
   Product,
 } from "@/types";
 import type {
@@ -26,6 +29,7 @@ const LATENCY = 300;
 const STORAGE_KEY = "pulseshop-mock-products";
 const MERCHANT_KEY = "pulseshop-mock-merchant";
 const ORDERS_KEY = "pulseshop-mock-orders-received";
+const MY_ORDERS_KEY = "pulseshop-mock-my-orders";
 const FOLLOWS_KEY = "pulseshop-mock-follows";
 const FAVORITES_KEY = "pulseshop-mock-server-favorites";
 const RATINGS_KEY = "pulseshop-mock-my-ratings";
@@ -74,6 +78,59 @@ let products = loadProducts();
 
 const makeRef = () =>
   `PS-${Date.now().toString(36).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
+
+/** Mirrors the DB's 256-bit hex access key (two UUIDs, dashes stripped). */
+const makeToken = () =>
+  (crypto.randomUUID?.() ?? `${Date.now()}${Math.random()}`).replace(/-/g, "") +
+  (crypto.randomUUID?.() ?? `${Date.now()}${Math.random()}`).replace(/-/g, "");
+
+/** The buyer's own placed orders + their secret keys (guest-lookup path). */
+interface MyOrderRecord {
+  order: MyOrder;
+  accessToken: string;
+}
+
+function loadMyOrders(): MyOrderRecord[] {
+  try {
+    return JSON.parse(localStorage.getItem(MY_ORDERS_KEY) ?? "[]") as MyOrderRecord[];
+  } catch {
+    return [];
+  }
+}
+
+function saveMyOrders(list: MyOrderRecord[]) {
+  try {
+    localStorage.setItem(MY_ORDERS_KEY, JSON.stringify(list));
+  } catch {
+    /* storage full/unavailable — keep in-memory copy */
+  }
+}
+
+function recordMyOrder(
+  reference: string,
+  items: OrderLine[],
+  draft: { channel: OrderDraft["channel"]; payment: OrderDraft["payment"] },
+): string {
+  const accessToken = makeToken();
+  const total = items.reduce((s, i) => s + i.lineTotalKes, 0);
+  const order: MyOrder = {
+    id: `o${Date.now()}`,
+    reference,
+    channel: draft.channel,
+    paymentMethod: draft.payment?.method ?? null,
+    paymentStatus: draft.payment?.status === "paid" ? "paid" : "pending",
+    subtotalKes: total,
+    totalKes: total,
+    placedAt: new Date().toISOString(),
+    shopName: merchant.name,
+    shopSlug: merchant.handle,
+    items,
+  };
+  const recs = loadMyOrders();
+  recs.unshift({ order, accessToken });
+  saveMyOrders(recs);
+  return accessToken;
+}
 
 const minsAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
 
@@ -296,13 +353,24 @@ export const mockServices: Services = {
   },
 
   orders: {
-    async submitOrder(draft: OrderDraft): Promise<{ reference: string }> {
+    async submitOrder(draft: OrderDraft): Promise<PlacedOrderRef> {
       await delay();
       const reference = makeRef();
       const p = products.find((x) => x.id === draft.productId);
+      const items: OrderLine[] = p
+        ? [
+            {
+              productName: p.name,
+              image: productImageSrc(p.images),
+              size: draft.size,
+              qty: draft.qty,
+              unitPriceKes: discountedPrice(p.priceKes, p.discountPct),
+              lineTotalKes: discountedPrice(p.priceKes, p.discountPct) * draft.qty,
+            },
+          ]
+        : [];
       if (p) {
-        const unit = discountedPrice(p.priceKes, p.discountPct);
-        const total = unit * draft.qty;
+        const total = items[0].lineTotalKes;
         ordersReceived = [
           {
             id: `o${Date.now()}`,
@@ -316,28 +384,20 @@ export const mockServices: Services = {
             subtotalKes: total,
             totalKes: total,
             placedAt: new Date().toISOString(),
-            items: [
-              {
-                productName: p.name,
-                image: productImageSrc(p.images),
-                size: draft.size,
-                qty: draft.qty,
-                unitPriceKes: unit,
-                lineTotalKes: total,
-              },
-            ],
+            items,
           },
           ...ordersReceived,
         ];
         saveOrders(ordersReceived);
       }
-      return { reference };
+      const accessToken = recordMyOrder(reference, items, draft);
+      return { reference, accessToken };
     },
 
-    async submitCartOrder(draft: CartOrderDraft): Promise<{ reference: string }> {
+    async submitCartOrder(draft: CartOrderDraft): Promise<PlacedOrderRef> {
       await delay();
       const reference = makeRef();
-      const items = draft.items.flatMap((item) => {
+      const items: OrderLine[] = draft.items.flatMap((item) => {
         const p = products.find((x) => x.id === item.productId);
         if (!p) return [];
         const unit = discountedPrice(p.priceKes, p.discountPct);
@@ -369,7 +429,8 @@ export const mockServices: Services = {
         ...ordersReceived,
       ];
       saveOrders(ordersReceived);
-      return { reference };
+      const accessToken = recordMyOrder(reference, items, draft);
+      return { reference, accessToken };
     },
 
     async listOrders(): Promise<MerchantOrder[]> {
@@ -388,6 +449,21 @@ export const mockServices: Services = {
         o.id === orderId ? { ...o, paymentStatus } : o,
       );
       saveOrders(ordersReceived);
+    },
+
+    async listMyOrders(): Promise<MyOrder[]> {
+      await delay();
+      return loadMyOrders().map((r) => structuredClone(r.order));
+    },
+
+    async lookupOrder(reference: string, accessToken: string): Promise<MyOrder | null> {
+      await delay();
+      // Both reference AND key must match — the key alone is the secret, exactly
+      // like get_order_by_token() server-side.
+      const rec = loadMyOrders().find(
+        (r) => r.order.reference === reference && r.accessToken === accessToken,
+      );
+      return rec ? structuredClone(rec.order) : null;
     },
   },
 

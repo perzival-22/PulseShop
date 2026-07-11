@@ -69,6 +69,36 @@ export interface OrderLine {
   lineTotalKes: number;
 }
 
+/**
+ * What placing an order returns to the buyer: the human reference plus the
+ * secret access key. The key is what lets that buyer (and only that buyer)
+ * look their order up later — persist it with the local order record.
+ */
+export interface PlacedOrderRef {
+  reference: string;
+  accessToken: string;
+}
+
+/**
+ * A placed order as the BUYER sees it — their own order, read back either from
+ * their signed-in history (RLS-scoped to customer_id) or via the secret-key
+ * lookup. Deliberately carries no merchant-internal ids.
+ */
+export interface MyOrder {
+  id: string;
+  reference: string;
+  channel: OrderChannel;
+  paymentMethod: PaymentMethod | null;
+  paymentStatus: PaymentStatus;
+  subtotalKes: number;
+  totalKes: number;
+  placedAt: string;
+  /** Present when read from signed-in history (joined); empty on guest lookup. */
+  shopName?: string;
+  shopSlug?: string;
+  items: OrderLine[];
+}
+
 /** A placed order with its line items, scoped to the receiving merchant. */
 export interface MerchantOrder {
   id: string;
