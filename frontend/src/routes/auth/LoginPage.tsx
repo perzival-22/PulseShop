@@ -17,7 +17,12 @@ import { GoogleButton } from "./GoogleButton";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  // Deliberately NOT the signup rules (lib/password.ts). Accounts created under
+  // the old 6-character minimum are still perfectly valid, and validating a
+  // sign-in against the new, stricter rules would lock those users out here in
+  // the browser — before Supabase ever got the chance to accept the password it
+  // considers correct. Strength belongs on the forms that *set* a password.
+  password: z.string().min(1, "Enter your password"),
 });
 
 type FormValues = z.infer<typeof schema>;

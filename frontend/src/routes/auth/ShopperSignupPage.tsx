@@ -1,13 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { Captcha } from "@/components/auth/Captcha";
+import { PasswordRequirements } from "@/components/auth/PasswordRequirements";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useCaptcha } from "@/hooks/useCaptcha";
 import { authErrorMessage } from "@/lib/authErrors";
+import { passwordSchema } from "@/lib/password";
 import { services } from "@/services";
 import { EmailConfirmationRequiredError } from "@/services/types";
 import { useAuth } from "@/stores/auth";
@@ -18,7 +21,7 @@ import { GoogleButton } from "./GoogleButton";
 const schema = z.object({
   name: z.string().min(2, "Enter your name"),
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(6, "At least 6 characters"),
+  password: passwordSchema,
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -32,9 +35,13 @@ export function ShopperSignupPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { password: "" } });
   const captcha = useCaptcha();
+
+  const password = watch("password");
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const onSubmit = handleSubmit(async (data) => {
     try {
@@ -83,14 +90,27 @@ export function ShopperSignupPage() {
           error={errors.email?.message}
           {...register("email")}
         />
-        <Input
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
+        {/* onFocus/onBlur bubble in React, so wrapping catches the input's own
+            focus without having to merge handlers into register()'s. */}
+        <div
+          onFocus={() => setPasswordFocused(true)}
+          onBlur={() => setPasswordFocused(false)}
+        >
+          <Input
+            label="Password"
+            type="password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            // The checklist below already spells out every rule; repeating the
+            // first unmet one as a red error underneath is just noise.
+            error={undefined}
+            {...register("password")}
+          />
+          <PasswordRequirements
+            value={password ?? ""}
+            show={passwordFocused || Boolean(password)}
+          />
+        </div>
         <Captcha
           key={captcha.nonce}
           onToken={captcha.setToken}

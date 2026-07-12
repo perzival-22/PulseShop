@@ -5,7 +5,9 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { Captcha } from "@/components/auth/Captcha";
+import { PasswordRequirements } from "@/components/auth/PasswordRequirements";
 import { useCaptcha } from "@/hooks/useCaptcha";
+import { passwordSchema } from "@/lib/password";
 import { Button } from "@/components/ui/Button";
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Input } from "@/components/ui/Input";
@@ -23,7 +25,7 @@ const schema = z
   .object({
     ...shopDetailsFields,
     email: z.string().email("Enter a valid email"),
-    password: z.string().min(6, "At least 6 characters"),
+    password: passwordSchema,
   })
   .superRefine(refineShopSocials);
 
@@ -50,6 +52,8 @@ export function SignupPage() {
 
   const shopName = watch("shopName");
   const slug = watch("slug");
+  const password = watch("password");
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   // Auto-fill the link from the shop name until the seller edits it themselves.
   useEffect(() => {
@@ -144,14 +148,27 @@ export function SignupPage() {
           />
         </div>
 
-        <Input
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
+        {/* onFocus/onBlur bubble in React, so wrapping catches the input's own
+            focus without having to merge handlers into register()'s. */}
+        <div
+          onFocus={() => setPasswordFocused(true)}
+          onBlur={() => setPasswordFocused(false)}
+        >
+          <Input
+            label="Password"
+            type="password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            // The checklist below already spells out every rule; repeating the
+            // first unmet one as a red error underneath is just noise.
+            error={undefined}
+            {...register("password")}
+          />
+          <PasswordRequirements
+            value={password ?? ""}
+            show={passwordFocused || Boolean(password)}
+          />
+        </div>
 
         <div className="rounded-card border border-white/60 bg-white/50 p-4">
           <p className="text-sm font-bold text-ink">Link your socials</p>
