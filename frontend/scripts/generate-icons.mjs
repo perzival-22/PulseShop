@@ -4,20 +4,23 @@ import sharp from "sharp";
 import { mkdirSync } from "node:fs";
 
 const SRC = "src/assets/pulseshoplogo1.jpg";
-// Light-teal background sampled from the logo's own edge, so maskable padding blends in.
-const BG = { r: 166, g: 207, b: 212 };
 
 mkdirSync("public/icons", { recursive: true });
 
-// Standard icons — the source already carries its own branded background, so full-bleed.
-await sharp(SRC).resize(192, 192).png().toFile("public/icons/icon-192.png");
-await sharp(SRC).resize(512, 512).png().toFile("public/icons/icon-512.png");
+// The source is wider than it is tall, so every square render below centre-crops it.
+// The cart sits centred in the frame; the trim only takes decorative speed lines.
+const square = { fit: "cover", position: "centre" };
 
-// Maskable — inset the art to ~80% (the safe zone) so circular/rounded masks
-// don't clip the cart or the "PulseShop" wordmark.
-const inner = await sharp(SRC).resize(410, 410).toBuffer();
-await sharp({ create: { width: 512, height: 512, channels: 3, background: BG } })
-  .composite([{ input: inner, gravity: "center" }])
+// Standard icons — the source already carries its own branded background, so full-bleed.
+await sharp(SRC).resize(192, 192, square).png().toFile("public/icons/icon-192.png");
+await sharp(SRC).resize(512, 512, square).png().toFile("public/icons/icon-512.png");
+
+// Maskable — inset the art to ~80% (the safe zone) so circular/rounded masks don't clip the cart.
+// The padding replicates the logo's own edge pixels rather than a flat fill: the source's
+// background is a teal gradient, so any single colour leaves a visible seam around the inset.
+await sharp(SRC)
+  .resize(410, 410, square)
+  .extend({ top: 51, bottom: 51, left: 51, right: 51, extendWith: "copy" })
   .png()
   .toFile("public/icons/maskable-512.png");
 

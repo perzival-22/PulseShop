@@ -1,4 +1,4 @@
-import fallback from "@/assets/pulseshoplogo.jpeg";
+import fallback from "@/assets/pulseshoplogo1.jpg";
 
 export const PRODUCT_IMAGE_FALLBACK = fallback;
 
