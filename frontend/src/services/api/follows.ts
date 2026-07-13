@@ -1,5 +1,5 @@
 import type { Merchant, Paged, ShopPreview } from "@/types";
-import type { FollowService, PageQuery } from "../types";
+import type { FollowService, ShopQuery } from "../types";
 import { requireUserId, supabase } from "./client";
 import { toSocialHandle, toWhatsAppDigits } from "@/lib/phone";
 
@@ -67,13 +67,14 @@ const DEFAULT_PAGE_SIZE = 20;
  * now flat in the number of shops.
  */
 export const followsApi: FollowService = {
-  async listShops(query?: PageQuery): Promise<Paged<Merchant>> {
+  async listShops(query?: ShopQuery): Promise<Paged<Merchant>> {
     const pageSize = query?.pageSize ?? DEFAULT_PAGE_SIZE;
     const page = Math.max(1, query?.page ?? 1);
 
     const { data, error } = await supabase.rpc("shop_directory", {
       p_limit: pageSize,
       p_offset: (page - 1) * pageSize,
+      p_search: query?.search?.trim() ?? "",
     });
     if (error) throw error;
 

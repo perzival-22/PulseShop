@@ -57,8 +57,9 @@ function toPagedProducts(rows: SearchRow[]): Paged<Product> {
 const DEFAULT_PAGE_SIZE = 12;
 
 /** ProductQuery -> search_products() arguments. Bound parameters, never a
- * filter string — see the note on ProductQuery in services/types.ts. */
-function searchArgs(merchantId: string, q: ProductQuery = {}) {
+ * filter string — see the note on ProductQuery in services/types.ts.
+ * A null merchantId searches every shop (migration 0023). */
+function searchArgs(merchantId: string | null, q: ProductQuery = {}) {
   const pageSize = q.pageSize ?? DEFAULT_PAGE_SIZE;
   const page = Math.max(1, q.page ?? 1);
   return {
@@ -164,6 +165,15 @@ export const productsApi: ProductService = {
 
   async listShopProducts(merchantId: string, query?: ProductQuery): Promise<Paged<Product>> {
     const { data, error } = await supabase.rpc("search_products", searchArgs(merchantId, query));
+    if (error) throw error;
+    return toPagedProducts((data ?? []) as SearchRow[]);
+  },
+
+  async searchProducts(query?: ProductQuery): Promise<Paged<Product>> {
+    // No merchant id = every shop's catalogue. Each row still carries its own
+    // shop_handle, which is what lets a result from a mixed-shop grid be added
+    // to the (single-shop) cart.
+    const { data, error } = await supabase.rpc("search_products", searchArgs(null, query));
     if (error) throw error;
     return toPagedProducts((data ?? []) as SearchRow[]);
   },

@@ -245,11 +245,12 @@ export function ProductDetailPage() {
       {/* header */}
       <header className="glass-header sticky top-0 z-30 flex items-center justify-between px-3 py-3 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
+          {/* mobile's back lives in the floating button (MobileShell) */}
           <button
             type="button"
             aria-label="Go back"
             onClick={() => navigate(-1)}
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:bg-transparent lg:shadow-none lg:hover:bg-stone-100"
+            className="hidden size-11 shrink-0 items-center justify-center rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:flex lg:hover:bg-stone-100"
           >
             <ArrowLeft className="size-5" />
           </button>
@@ -315,7 +316,8 @@ export function ProductDetailPage() {
         </div>
       )}
 
-      <div className="px-4 pb-24 pt-2 lg:px-6 lg:pb-14 lg:pt-6">
+      {/* mobile's bottom clearance (action bar + floating back) comes from MobileShell */}
+      <div className="px-4 pt-2 lg:px-6 lg:pb-14 lg:pt-6">
         <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-10">
           {/* gallery */}
           <Gallery

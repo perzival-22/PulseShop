@@ -134,6 +134,14 @@ export interface PageQuery {
   pageSize?: number;
 }
 
+/** A page of the shop directory, optionally narrowed by the universal search on
+ * /shops. Same reasoning as ProductQuery: the term is a bound RPC parameter, and
+ * the search must run server-side or it would only ever see the loaded page. */
+export interface ShopQuery extends PageQuery {
+  /** Matches a shop's name, handle, bio or location. Empty = the whole directory. */
+  search?: string;
+}
+
 export interface ProductService {
   getMerchant(): Promise<Merchant>;
   updateMerchant(patch: MerchantUpdate): Promise<Merchant>;
@@ -147,6 +155,9 @@ export interface ProductService {
   getShop(slug: string): Promise<Merchant | null>;
   /** Public: products for a given shop. */
   listShopProducts(merchantId: string, query?: ProductQuery): Promise<Paged<Product>>;
+  /** Public: products across EVERY shop — the product half of the universal
+   * search on /shops. Same filters and paging as the shop-scoped list. */
+  searchProducts(query?: ProductQuery): Promise<Paged<Product>>;
   /** The category list, price ceiling and stock counts a filter UI needs —
    * aggregates over the whole catalogue, which a single page can't give you.
    * Omit `merchantId` for the signed-in merchant's own catalogue. */
@@ -201,8 +212,8 @@ export interface AnalyticsService {
 /** Instagram-style shop following for signed-in users. */
 export interface FollowService {
   /** Public: one page of the shop discover list, each row carrying its stats
-   * and product previews already aggregated. */
-  listShops(query?: PageQuery): Promise<Paged<Merchant>>;
+   * and product previews already aggregated. Optionally narrowed by a search term. */
+  listShops(query?: ShopQuery): Promise<Paged<Merchant>>;
   /** Merchant ids the signed-in user follows. */
   listFollowing(): Promise<string[]>;
   follow(merchantId: string): Promise<void>;

@@ -22,6 +22,7 @@ import type {
   ProductInput,
   ProductQuery,
   Services,
+  ShopQuery,
   ShopperSignupInput,
   SignupInput,
 } from "../types";
@@ -75,11 +76,14 @@ function queryProducts(all: Product[], q: ProductQuery = {}): Paged<Product> {
         ? list.filter((p) => p.status !== "out")
         : list.filter((p) => p.status === q.status);
   }
-  if (q.maxPrice != null) list = list.filter((p) => p.priceKes <= q.maxPrice!);
+  // The price the shopper is shown — and therefore the only one they can mean
+  // when they filter or sort by price. See migration 0023.
+  const price = (p: Product) => discountedPrice(p.priceKes, p.discountPct);
+  if (q.maxPrice != null) list = list.filter((p) => price(p) <= q.maxPrice!);
 
   list = [...list];
-  if (q.sort === "price-asc") list.sort((a, b) => a.priceKes - b.priceKes);
-  else if (q.sort === "price-desc") list.sort((a, b) => b.priceKes - a.priceKes);
+  if (q.sort === "price-asc") list.sort((a, b) => price(a) - price(b));
+  else if (q.sort === "price-desc") list.sort((a, b) => price(b) - price(a));
   else list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return paginate(list, q.page, q.pageSize ?? DEFAULT_PRODUCT_PAGE);
@@ -406,11 +410,21 @@ export const mockServices: Services = {
       return { ...page, items: page.items.map((p) => ({ ...p, shopSlug: merchant.handle })) };
     },
 
+    async searchProducts(query?: ProductQuery): Promise<Paged<Product>> {
+      await delay();
+      // The mock only has the one shop, so a platform-wide search is the same
+      // catalogue — what matters is that it honours the query the same way.
+      const page = queryProducts(products, query);
+      return { ...page, items: page.items.map((p) => ({ ...p, shopSlug: merchant.handle })) };
+    },
+
     async getFacets(_merchantId?: string): Promise<ShopFacets> {
       await delay();
       return {
         categories: [...new Set(products.map((p) => p.category))].sort(),
-        priceCeiling: Math.max(0, ...products.map((p) => p.priceKes)),
+        // Ceiling of the DISCOUNTED prices — it's the top of the price slider,
+        // whose value is handed straight back to the discount-aware filter.
+        priceCeiling: Math.max(0, ...products.map((p) => discountedPrice(p.priceKes, p.discountPct))),
         total: products.length,
         available: products.filter((p) => p.status === "available").length,
         low: products.filter((p) => p.status === "low").length,
@@ -598,7 +612,7 @@ export const mockServices: Services = {
 
   follows: {
     // Single demo shop in mock mode; follows persist per browser.
-    async listShops(query?: PageQuery): Promise<Paged<Merchant>> {
+    async listShops(query?: ShopQuery): Promise<Paged<Merchant>> {
       await delay();
       const shop: Merchant = {
         ...structuredClone(merchant),
@@ -607,7 +621,16 @@ export const mockServices: Services = {
           .slice(0, 3)
           .map((p) => ({ id: p.id, name: p.name, image: productImageSrc(p.images) })),
       };
-      return paginate([shop], query?.page, query?.pageSize);
+
+      // Mirrors shop_directory()'s search (0023): name, handle, bio, location.
+      const term = query?.search?.trim().toLowerCase();
+      const matches =
+        !term ||
+        [shop.name, shop.handle, shop.bio, shop.location].some((f) =>
+          f.toLowerCase().includes(term),
+        );
+
+      return paginate(matches ? [shop] : [], query?.page, query?.pageSize);
     },
 
     async listFollowing(): Promise<string[]> {

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
+import { FloatingBack } from "./FloatingBack";
 
 /** Phone-width shell for all customer routes: constrained column + sticky bottom nav. */
 export function MobileShell({
@@ -25,7 +26,12 @@ export function MobileShell({
         wide && "lg:max-w-[1180px]",
       )}
     >
-      <div className={nav ? "pb-28" : ""}>{children}</div>
+      {/* Mobile gets a deeper floor than the nav pill alone needs: the floating
+          back button sits above the pill, and content scrolled to the very
+          bottom would otherwise end up underneath it — including, on checkout,
+          the submit button, whose left edge the button would silently eat. */}
+      <div className={cn(nav && "pb-28", "max-lg:pb-40")}>{children}</div>
+      <FloatingBack homeTo={homeTo} />
       {nav && <BottomNav homeTo={homeTo} />}
     </div>
   );

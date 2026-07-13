@@ -187,11 +187,12 @@ export function CheckoutPage() {
   return (
     <MobileShell nav={false}>
       <header className="glass-header sticky top-0 z-30 flex items-center gap-3 px-3 py-3">
+        {/* mobile's back lives in the floating button (MobileShell) */}
         <button
           type="button"
           aria-label="Go back"
           onClick={() => navigate(-1)}
-          className="flex size-11 items-center justify-center rounded-full bg-card shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="hidden size-11 items-center justify-center rounded-full bg-card shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:flex"
         >
           <ArrowLeft className="size-5" />
         </button>
