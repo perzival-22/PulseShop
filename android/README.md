@@ -43,26 +43,42 @@ keytool -list -v -keystore pulseshop.keystore -alias pulseshop
 
 ## Building the APK
 
-Bubblewrap needs a JDK 17 and the Android SDK; it downloads both on first run,
-but **Google's SDK Terms and Conditions must be accepted by a human**, so this
-step is interactive by design:
+`twa-manifest.json` is the only source file here — everything else Bubblewrap
+generates (`app/`, `build.gradle`, `gradlew`, the APK) is gitignored and
+recreated by the build.
 
-```bash
-npm i -g @bubblewrap/cli     # once
+```powershell
+npm i -g @bubblewrap/cli          # once
 cd android
-bubblewrap build             # answer Y to install the JDK/SDK, then accept the T&Cs
+$env:BUBBLEWRAP_KEYSTORE_PASSWORD = (Get-Content keystore-password.txt -Raw).Trim()
+$env:BUBBLEWRAP_KEY_PASSWORD      = $env:BUBBLEWRAP_KEYSTORE_PASSWORD
+bubblewrap build --skipPwaValidation
 ```
 
 Output: `app-release-signed.apk` (sideload / share directly) and
 `app-release-bundle.aab` (Play Store).
 
-Bubblewrap will ask for the keystore password — it's in `keystore-password.txt`,
-or export it first to avoid the prompt:
+On the first run Bubblewrap downloads a JDK 17 and the Android SDK — the
+project's own JDK is not used, and **Google's SDK Terms and Conditions have to
+be accepted by a human**, so that first run is interactive by design.
 
-```bash
-export BUBBLEWRAP_KEYSTORE_PASSWORD="…"
-export BUBBLEWRAP_KEY_PASSWORD="…"
-```
+### Two Windows traps, both hit while setting this up
+
+1. **`'gradlew.bat' is not recognized`.** This machine has
+   `NoDefaultCurrentDirectoryInExePath=1` set, so `cmd` refuses to run an
+   executable from the current directory — and Bubblewrap invokes `gradlew.bat`
+   bare, without `.\`. The build fails with a message that looks like a missing
+   file even though `gradlew.bat` is sitting right there. Clear the variable in
+   the shell first:
+
+   ```powershell
+   Remove-Item Env:\NoDefaultCurrentDirectoryInExePath -ErrorAction SilentlyContinue
+   ```
+
+2. **Do not pipe blanket `y` answers into it.** Bubblewrap asks free-text
+   questions as well as yes/no ones — feeding it a stream of `y` set the app's
+   `versionName` to the literal string `"y"`. Answer the prompts, or pass the
+   passwords via the env vars above so it has nothing to ask.
 
 ## After the first deploy — verify the handshake
 

@@ -39,5 +39,6 @@
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
+  "displayOverride": [],
   "appVersion": "1.0.0"
 }
