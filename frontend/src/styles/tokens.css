@@ -141,6 +141,59 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+
+  /* iOS: stop the rubber-band.
+     Scroll past the top or bottom on iOS and the whole document bounces beyond
+     its bounds — and `position: fixed` elements are painted relative to that
+     bouncing viewport, so the bottom nav pill visibly slides up and down with
+     the overscroll even though it is pinned. Killing the bounce is what makes
+     it sit still; it also disables pull-to-refresh, which an installed app
+     shouldn't have anyway. */
+  overscroll-behavior: none;
+}
+
+/* iOS: stop the zoom-on-tap.
+   Safari auto-zooms the page whenever a text field smaller than 16px takes
+   focus — and every field here is text-sm (14px), so tapping any input on the
+   checkout form yanked the layout in. Bumping the fields to 16px on phones is
+   the fix; there is no way to refuse the zoom without also refusing pinch-zoom,
+   which would be an accessibility regression.
+
+   The :not() is load-bearing for specificity, not just for excluding checkboxes:
+   a bare `input` selector (0,0,1) loses to Tailwind's `.text-sm` (0,1,0), so the
+   rule would be silently overridden. With the attribute selector it is (0,1,1)
+   and wins. */
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Removes the double-tap-to-zoom gesture (and the 300ms click delay that comes
+   with waiting to see if a second tap is coming) on things meant to be tapped
+   once. Pinch-zoom is untouched. */
+button,
+a,
+label,
+select,
+summary,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"] {
+  touch-action: manipulation;
+}
+
+/* iOS: keep pinned furniture pinned.
+   During momentum scrolling, iOS rasterises fixed elements on the scrolling
+   layer and they judder a frame behind the content. Promoting them to their own
+   compositor layer keeps them nailed to the viewport. Paired with the
+   overscroll-behavior above — that stops the bounce, this stops the jitter. */
+.fixed-stable {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* subtle pulse for the online indicator */

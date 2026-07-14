@@ -7,7 +7,7 @@ export function BottomNav({ homeTo }: { homeTo?: string }) {
   const { home, items, badgeFor } = useBuyerNavItems(homeTo);
 
   return (
-    <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 lg:hidden">
+    <nav className="fixed-stable fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 lg:hidden">
       <div className="glass-nav flex rounded-full p-1.5">
         {items.map(({ to, label, icon: Icon }) => {
           const badge = badgeFor(label);

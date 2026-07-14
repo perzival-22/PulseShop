@@ -501,7 +501,7 @@ export function ProductDetailPage() {
 
       {/* primary CTA — floating glass bar echoing the nav pill; desktop uses
           the inline order panel above instead */}
-      <div className="glass fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 items-center gap-1.5 rounded-full p-1.5 lg:hidden">
+      <div className="glass fixed-stable fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 items-center gap-1.5 rounded-full p-1.5 lg:hidden">
         <button
           type="button"
           aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
