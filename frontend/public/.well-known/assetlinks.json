@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "space.pulseshop.app",
+      "sha256_cert_fingerprints": ["56:E7:0D:22:25:13:07:1B:9C:F5:BA:DD:21:F5:74:E7:F6:C7:B3:77:D9:8B:79:80:6B:BF:B6:28:3A:C8:26:1D"]
+    }
+  }
+]

@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0D9488" />
     <meta name="description" content="PulseShop — social-commerce storefront. Browse, favorite, and order in one tap." />
+
+    <!-- iOS ignores the web manifest entirely: without these, "Add to Home
+         Screen" saves a bookmark that opens in a Safari tab with the address
+         bar, using a screenshot of the page as its icon. These are what make it
+         launch full-screen with the real logo, and they have no Android effect. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PulseShop" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
     <title>PulseShop</title>
   </head>
   <body>

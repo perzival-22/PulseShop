@@ -1,0 +1,43 @@
+{
+  "packageId": "space.pulseshop.app",
+  "host": "pulseshop.space",
+  "name": "PulseShop",
+  "launcherName": "PulseShop",
+  "display": "standalone",
+  "themeColor": "#0D9488",
+  "themeColorDark": "#0D9488",
+  "navigationColor": "#0D9488",
+  "navigationColorDark": "#0D9488",
+  "navigationDividerColor": "#0D9488",
+  "navigationDividerColorDark": "#0D9488",
+  "backgroundColor": "#FAFAF9",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://pulseshop.space/icons/icon-512.png",
+  "maskableIconUrl": "https://pulseshop.space/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./pulseshop.keystore",
+    "alias": "pulseshop"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://pulseshop.space/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://pulseshop.space/",
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1.0.0"
+}
