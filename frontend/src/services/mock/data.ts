@@ -36,6 +36,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["S", "M", "L", "XL"],
     rating: 4.7,
     reviewCount: 41,
+    summary: "Soft 100% cotton crew-neck tee with a relaxed everyday fit. Pre-shrunk and double-stitched so it keeps its shape wash after wash.",
     description:
       "Soft 100% cotton crew-neck tee with a relaxed everyday fit. Pre-shrunk and double-stitched so it keeps its shape wash after wash.",
     createdAt: daysAgo(3),
@@ -53,6 +54,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["S", "M", "L"],
     rating: 4.5,
     reviewCount: 27,
+    summary: "Statement graphic tee in heavyweight cotton. Screen-printed artwork that won't crack or fade.",
     description:
       "Statement graphic tee in heavyweight cotton. Screen-printed artwork that won't crack or fade.",
     createdAt: daysAgo(6),
@@ -70,6 +72,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["M", "L", "XL"],
     rating: 4.9,
     reviewCount: 18,
+    summary: "Chunky knit sweater in a warm neutral tone. Perfect for chilly Nairobi evenings — pairs with everything.",
     description:
       "Chunky knit sweater in a warm neutral tone. Perfect for chilly Nairobi evenings — pairs with everything.",
     createdAt: daysAgo(10),
@@ -87,6 +90,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["S", "M", "L"],
     rating: 4.6,
     reviewCount: 22,
+    summary: "Elegant silk-blend blouse with a relaxed drape. Dress it up for the office or down for the weekend.",
     description:
       "Elegant silk-blend blouse with a relaxed drape. Dress it up for the office or down for the weekend.",
     createdAt: daysAgo(15),
@@ -104,6 +108,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["26", "28", "30", "32"],
     rating: 4.8,
     reviewCount: 56,
+    summary: "Flattering high-waist denim with just the right stretch. A true-to-size fit that hugs without pinching.",
     description:
       "Flattering high-waist denim with just the right stretch. A true-to-size fit that hugs without pinching.",
     createdAt: daysAgo(2),
@@ -121,6 +126,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["S", "M", "L"],
     rating: 4.4,
     reviewCount: 13,
+    summary: "Breezy wide-leg trousers in a flowy weave. Office-ready with heels, weekend-ready with sneakers.",
     description:
       "Breezy wide-leg trousers in a flowy weave. Office-ready with heels, weekend-ready with sneakers.",
     createdAt: daysAgo(8),
@@ -138,6 +144,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["26", "28", "30"],
     rating: 4.3,
     reviewCount: 9,
+    summary: "Classic frayed-hem denim shorts. Mid-rise, lightly distressed, made for hot afternoons.",
     description:
       "Classic frayed-hem denim shorts. Mid-rise, lightly distressed, made for hot afternoons.",
     createdAt: daysAgo(12),
@@ -155,6 +162,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["S", "M", "L"],
     rating: 4.9,
     reviewCount: 64,
+    summary: "Romantic floral midi with a smocked bodice and flutter sleeves. The dress everyone asks about.",
     description:
       "Romantic floral midi with a smocked bodice and flutter sleeves. The dress everyone asks about.",
     createdAt: daysAgo(1),
@@ -172,6 +180,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["XS", "S", "M", "L"],
     rating: 4.7,
     reviewCount: 38,
+    summary: "The timeless LBD — tailored fit, midi length, works for dinner dates and big nights alike.",
     description:
       "The timeless LBD — tailored fit, midi length, works for dinner dates and big nights alike.",
     createdAt: daysAgo(5),
@@ -189,6 +198,7 @@ export const PRODUCTS: Product[] = [
     sizes: ["S", "M", "L"],
     rating: 4.8,
     reviewCount: 45,
+    summary: "Flowing maxi in breathable viscose. Sold out fast last drop — join the waitlist via WhatsApp.",
     description:
       "Flowing maxi in breathable viscose. Sold out fast last drop — join the waitlist via WhatsApp.",
     createdAt: daysAgo(20),
@@ -206,6 +216,7 @@ export const PRODUCTS: Product[] = [
     sizes: null,
     rating: 4.6,
     reviewCount: 31,
+    summary: "Clean-faced minimalist watch with a vegan leather strap. Water-resistant, 2-year battery.",
     description:
       "Clean-faced minimalist watch with a vegan leather strap. Water-resistant, 2-year battery.",
     createdAt: daysAgo(4),
@@ -223,6 +234,7 @@ export const PRODUCTS: Product[] = [
     sizes: null,
     rating: 4.5,
     reviewCount: 17,
+    summary: "Roomy structured tote that fits a laptop, water bottle, and the rest of your life. Durable canvas with leather trim.",
     description:
       "Roomy structured tote that fits a laptop, water bottle, and the rest of your life. Durable canvas with leather trim.",
     createdAt: daysAgo(7),

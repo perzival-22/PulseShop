@@ -75,7 +75,7 @@ export function ProductDetailPage() {
   // instead of only on OrderPage) — default to the seller's first configured
   // channel once merchant data loads.
   const [desktopChannel, setDesktopChannel] = useState<Channel | null>(null);
-  const [descExpanded, setDescExpanded] = useState(false);
+  const [descExpanded, _setDescExpanded] = useState(false);
 
   const merchant = merchantQ.data;
   // A merchant can't rate their own product — the DB rejects it too.
