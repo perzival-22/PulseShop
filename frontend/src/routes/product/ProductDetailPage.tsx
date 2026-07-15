@@ -126,6 +126,13 @@ export function ProductDetailPage() {
     return out;
   }, [sameCategoryQ.data, shopFillQ.data, product]);
 
+  const descriptionParagraphs = useMemo(
+  () => product?.description.split(/\n\s*\n/).filter(Boolean) ?? [],
+[product?.description],
+);
+
+  
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const submitSearch = () => {
@@ -210,6 +217,7 @@ export function ProductDetailPage() {
     setPreferredChannel(desktopChannel);
     navigate(`/order/${product.id}`);
   };
+
 
   const handleAddToCart = () => {
     if (product.sizes && !size) {
@@ -374,20 +382,21 @@ export function ProductDetailPage() {
               label={stockDetailLabel(product.status, product.stockQty)}
             />
             <div className="space-y-1">
-  <p className={cn("text-sm leading-relaxed text-ink/80", !descExpanded && "line-clamp-3")}>
-    {product.description}
-  </p>
-  {product.description.length > 140 && (
-    <button
-      type="button"
-      onClick={() => setDescExpanded((v) => !v)}
-      className="text-xs font-bold text-primary"
-    >
-      {descExpanded ? "Show less" : "Read more"}
-    </button>
-  )}
-</div>
-
+              <div className={cn("space-y-2.5 text-sm leading-relaxed text-ink/80", !descExpanded && "line-clamp-3")}>
+                {descExpanded
+                  ? descriptionParagraphs.map((para, i) => <p key={i}>{para}</p>)
+                  : product.description}
+              </div>
+              {product.description.length > 140 && (
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded((v) => !v)}
+                  className="text-xs font-bold text-primary"
+                >
+                  {descExpanded ? "Show less" : "Read more"}
+                </button>
+              )}
+            </div>
             {/* size selector */}
             {product.sizes && (
               <div className="space-y-2">
