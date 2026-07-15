@@ -371,7 +371,20 @@ export function ProductDetailPage() {
               status={product.status}
               label={stockDetailLabel(product.status, product.stockQty)}
             />
-            <p className="line-clamp-3 text-sm leading-relaxed text-ink/80">{product.description}</p>
+            <div className="space-y-1">
+  <p className={cn("text-sm leading-relaxed text-ink/80", !descExpanded && "line-clamp-3")}>
+    {product.description}
+  </p>
+  {product.description.length > 140 && (
+    <button
+      type="button"
+      onClick={() => setDescExpanded((v) => !v)}
+      className="text-xs font-bold text-primary"
+    >
+      {descExpanded ? "Show less" : "Read more"}
+    </button>
+  )}
+</div>
 
             {/* size selector */}
             {product.sizes && (
