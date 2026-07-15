@@ -126,10 +126,16 @@ export function ProductDetailPage() {
     return out;
   }, [sameCategoryQ.data, shopFillQ.data, product]);
 
-  const descriptionParagraphs = useMemo(
-  () => product?.description.split(/\n\s*\n/).filter(Boolean) ?? [],
-[product?.description],
-);
+  const descriptionParagraphs = useMemo(() => {
+    if (!product?.description) return [];
+    return product.description
+      // insert a paragraph break before "Word(s):" style labels,
+      // e.g. "...Portability: Extremely thin..." → break before "Portability:"
+      .replace(/(?<=[.;])\s+(?=[A-Z][a-zA-Z &]{2,30}:)/g, "\n\n")
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }, [product?.description]);
 
   
 
@@ -381,21 +387,23 @@ export function ProductDetailPage() {
               status={product.status}
               label={stockDetailLabel(product.status, product.stockQty)}
             />
-            <div className="space-y-1">
-              <div className={cn("space-y-2.5 text-sm leading-relaxed text-ink/80", !descExpanded && "line-clamp-3")}>
-                {descExpanded
-                  ? descriptionParagraphs.map((para, i) => <p key={i}>{para}</p>)
-                  : product.description}
-              </div>
-              {product.description.length > 140 && (
-                <button
-                  type="button"
-                  onClick={() => setDescExpanded((v) => !v)}
-                  className="text-xs font-bold text-primary"
-                >
-                  {descExpanded ? "Show less" : "Read more"}
-                </button>
-              )}
+            <div className={cn("space-y-4 text-sm leading-relaxed text-ink/80", !descExpanded && "line-clamp-3")}>
+              {descExpanded
+                ? descriptionParagraphs.map((para, i) => {
+                  const match = para.match(/^([A-Z][a-zA-Z &]{2,30}:)\s*(.*)$/s);
+                  return (
+                    <p key={i}>
+                      {match ? (
+                        <>
+                          <span className="font-bold text-ink">{match[1]}</span> {match[2]}
+                        </>
+                      ) : (
+                        para
+                      )}
+                    </p>
+                  );
+                })
+                : product.description}
             </div>
             {/* size selector */}
             {product.sizes && (
