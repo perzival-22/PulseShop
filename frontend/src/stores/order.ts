@@ -22,6 +22,14 @@ interface OrderState {
   saveCustomer: (customer: CustomerInfo) => void;
   setPreferredChannel: (channel: OrderChannel | null) => void;
   resetDraft: () => void;
+  /**
+   * Forget the saved customer (name/phone/notes). This is the buyer's PII, kept
+   * across orders for convenience but persisted to localStorage — so it must be
+   * wiped on sign-out, or the next person on a shared device sees the previous
+   * shopper's name and phone prefilled at checkout. (Signed-in shoppers re-seed
+   * it from their account profile; see AccountPage / useAccountProfile.)
+   */
+  clearCustomer: () => void;
 }
 
 export const useOrderStore = create<OrderState>()(
@@ -36,6 +44,7 @@ export const useOrderStore = create<OrderState>()(
       saveCustomer: (customer) => set({ customer }),
       setPreferredChannel: (preferredChannel) => set({ preferredChannel }),
       resetDraft: () => set({ selectedSize: null, qty: 1, preferredChannel: null }),
+      clearCustomer: () => set({ customer: { name: "", phone: "", notes: "" } }),
     }),
     {
       name: "pulseshop-order",

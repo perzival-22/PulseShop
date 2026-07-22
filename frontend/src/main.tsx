@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { StrictMode } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { StrictMode, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { registerSW } from "virtual:pwa-register";
@@ -13,8 +13,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { InstallPrompt } from "@/components/layout/InstallPrompt";
 import { Toaster } from "@/components/ui/Toaster";
 import { useCartSync } from "@/hooks/useCart";
+import { useFavoritesSync } from "@/hooks/useFavorites";
+import { useProfileSync } from "@/hooks/useProfileSync";
 import { isSupabaseConfigured, supabase } from "@/services/api/client";
 import { useAuth } from "@/stores/auth";
+import { useOrderStore } from "@/stores/order";
 import { useToasts } from "@/stores/toast";
 import { LoginPage } from "@/routes/auth/LoginPage";
 import { ResetPasswordPage } from "@/routes/auth/ResetPasswordPage";
@@ -71,10 +74,45 @@ const queryClient = new QueryClient({
   },
 });
 
-/** Keeps the local cart in sync with the signed-in shopper's account —
- * pulled/pushed on sign-in, cleared on sign-out. See hooks/useCart.ts. */
+/**
+ * Owns the per-account data lifecycle for the whole app. Two jobs:
+ *
+ *  - Cross-device sync: the signed-in shopper's cart and favorites are
+ *    pulled from (and pushed to) the DB, so they follow the ACCOUNT rather
+ *    than the browser (useCartSync / useFavoritesSync).
+ *  - Shared-device safety: on sign-out EVERY piece of device-local personal
+ *    state is wiped — cart + order history (useCartSync), favorites
+ *    (useFavoritesSync), the saved checkout customer (name/phone/notes), and
+ *    the entire React Query cache (DB-scoped data like the user's own orders
+ *    and follows). Without this, the next person to use a shared device would
+ *    inherit the previous account's data. The React Query clear here also
+ *    covers the token-expiry / other-tab sign-out that flows through
+ *    onAuthStateChange, which AccountPage's explicit sign-out handler can't.
+ *
+ * The security rule this enforces: a user only ever sees their own data, and
+ * signing out leaves nothing personal behind on the device.
+ */
 function AppSync() {
   useCartSync();
+  useFavoritesSync();
+  useProfileSync();
+
+  const userId = useAuth((s) => s.session?.id ?? null);
+  const queryClient = useQueryClient();
+  const wasSignedIn = useRef(false);
+
+  useEffect(() => {
+    if (userId) {
+      wasSignedIn.current = true;
+      return;
+    }
+    if (wasSignedIn.current) {
+      useOrderStore.getState().clearCustomer();
+      queryClient.clear();
+    }
+    wasSignedIn.current = false;
+  }, [userId, queryClient]);
+
   return null;
 }
 

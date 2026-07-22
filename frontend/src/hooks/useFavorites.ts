@@ -5,18 +5,36 @@ import { useFavorites } from "@/stores/favorites";
 import { useToasts } from "@/stores/toast";
 
 /**
- * Pulls a signed-in user's favorites from the server into the local (device)
- * store once per sign-in, and pushes up any local-only ids (saved as a guest
- * just before logging in, or offline). Mount once near the app root —
- * stores/favorites.ts stays the fast, always-available local cache; this
- * just keeps it caught up with the DB so favorites survive a new device.
+ * Cross-device sync for favorites, plus the shared-device safety clear.
+ *
+ * On sign-in: pulls the signed-in user's favorites from the server (DB
+ * `favorites` table, RLS owner-only) into the local (device) store, and pushes
+ * up any local-only ids (saved as a guest just before logging in, or offline)
+ * so a guest's favorites aren't lost when they log in. This is what makes
+ * favorites follow the ACCOUNT to a new device instead of living only in this
+ * browser's localStorage.
+ *
+ * On sign-out: clears the local favorites, because the store persists under a
+ * fixed localStorage key and favorites are personal — without this, the next
+ * person on a shared device would see the previous account's favorites (the
+ * same leak class the cart and order history had).
+ *
+ * Mount once near the app root (see AppSync in main.tsx).
  */
 export function useFavoritesSync() {
   const userId = useAuth((s) => s.session?.id ?? null);
   const syncedFor = useRef<string | null>(null);
+  const wasSignedIn = useRef(false);
 
   useEffect(() => {
-    if (!userId || syncedFor.current === userId) return;
+    if (!userId) {
+      if (wasSignedIn.current) useFavorites.getState().clear();
+      wasSignedIn.current = false;
+      syncedFor.current = null;
+      return;
+    }
+    wasSignedIn.current = true;
+    if (syncedFor.current === userId) return;
     syncedFor.current = userId;
 
     (async () => {
