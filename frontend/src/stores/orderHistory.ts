@@ -14,6 +14,8 @@ export interface PlacedOrder {
   productName: string;
   image: string;
   size: string | null;
+  /** Optional so orders saved before colours existed still load. */
+  color?: string | null;
   qty: number;
   totalKes: number;
   channel: OrderChannel;

@@ -43,6 +43,9 @@ const json = (body: unknown, status = 200) =>
 interface OrderItem {
   product_id: string;
   size: string | null;
+  /** The chosen colour. place_order() rejects one the seller doesn't offer, so
+   * this is forwarded, never trusted. */
+  color: string | null;
   qty: number;
 }
 

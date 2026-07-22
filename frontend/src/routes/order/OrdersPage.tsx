@@ -7,6 +7,7 @@ import { DesktopQuickNav } from "@/components/layout/DesktopQuickNav";
 import { ProductImage } from "@/components/product/ProductImage";
 import { Badge } from "@/components/ui/Badge";
 import { formatKes } from "@/lib/currency";
+import { variantKey, variantLabel } from "@/lib/variant";
 import { services } from "@/services";
 import { useAuth } from "@/stores/auth";
 import { useOrderHistory } from "@/stores/orderHistory";
@@ -19,6 +20,7 @@ interface OrderCard {
   productName: string;
   image: string;
   size: string | null;
+  color: string | null;
   qty: number;
   lineTotalKes: number;
   paid: boolean;
@@ -43,11 +45,12 @@ export function OrdersPage() {
 
   const dbCards: OrderCard[] = (dbQ.data ?? []).flatMap((o) =>
     o.items.map((it, idx) => ({
-      key: `${o.reference}-${it.productName}-${it.size ?? "one"}-${idx}`,
+      key: `${o.reference}-${it.productName}-${variantKey(it.size, it.color)}-${idx}`,
       reference: o.reference,
       productName: it.productName,
       image: it.image,
       size: it.size,
+      color: it.color,
       qty: it.qty,
       lineTotalKes: it.lineTotalKes,
       paid: o.paymentStatus === "paid",
@@ -59,11 +62,12 @@ export function OrdersPage() {
   const localCards: OrderCard[] = localOrders
     .filter((o) => !dbRefs.has(o.reference))
     .map((o) => ({
-      key: `${o.reference}-${o.productId}-${o.size ?? "one"}`,
+      key: `${o.reference}-${o.productId}-${variantKey(o.size, o.color ?? null)}`,
       reference: o.reference,
       productName: o.productName,
       image: o.image,
       size: o.size,
+      color: o.color ?? null,
       qty: o.qty,
       lineTotalKes: o.totalKes,
       paid: Boolean(o.paymentMethod),
@@ -129,7 +133,8 @@ export function OrdersPage() {
                   <div>
                     <p className="text-sm font-bold text-ink">{c.productName}</p>
                     <p className="text-xs text-muted">
-                      {c.size ? `Size ${c.size} · ` : ""}Qty {c.qty} ·{" "}
+                      {variantLabel(c.size, c.color) ? `${variantLabel(c.size, c.color)} · ` : ""}Qty{" "}
+                      {c.qty} ·{" "}
                       {new Date(c.placedAt).toLocaleDateString()}
                     </p>
                   </div>

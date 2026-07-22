@@ -21,6 +21,7 @@ export interface ProductRow {
   status: StockStatus;
   images: string[] | null;
   sizes: string[] | null;
+  colors: string[] | null;
   rating: number | string;
   review_count: number;
   summary?: string | null;
@@ -60,6 +61,7 @@ export function toProduct(row: ProductRow): Product {
     status: row.status,
     images: row.images ?? [],
     sizes: row.sizes,
+    colors: row.colors,
     rating: Number(row.rating),
     reviewCount: row.review_count,
     summary: row.summary ?? null,
@@ -106,6 +108,7 @@ export function productInputToRow(patch: Partial<ProductInput>): Record<string, 
   if (patch.stockQty !== undefined) row.stock_qty = patch.stockQty;
   if (patch.images !== undefined) row.images = patch.images;
   if (patch.sizes !== undefined) row.sizes = patch.sizes;
+  if (patch.colors !== undefined) row.colors = patch.colors;
   if (patch.summary !== undefined) row.summary = patch.summary;
   if (patch.description !== undefined) row.description = patch.description;
   return row;

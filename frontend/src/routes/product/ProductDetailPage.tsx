@@ -7,6 +7,7 @@ import { Gallery } from "@/components/product/Gallery";
 import { ProductCard } from "@/components/product/ProductCard";
 import { RatingRow } from "@/components/product/RatingRow";
 import { ShareMenu } from "@/components/product/ShareMenu";
+import { ColorSelector } from "@/components/product/ColorSelector";
 import { SizeSelector } from "@/components/product/SizeSelector";
 import { StockBadge, stockDetailLabel } from "@/components/product/StockBadge";
 import { Button } from "@/components/ui/Button";
@@ -69,8 +70,17 @@ export function ProductDetailPage() {
   const addToCart = useAddToCart();
   const cartItems = useCart((s) => s.items);
   const cartItemCount = cartCount(cartItems);
-  const { selectedSize, setSelectedSize, qty, setQty, setPreferredChannel } = useOrderStore();
+  const {
+    selectedSize,
+    setSelectedSize,
+    selectedColor,
+    setSelectedColor,
+    qty,
+    setQty,
+    setPreferredChannel,
+  } = useOrderStore();
   const [localSize, setLocalSize] = useState<string | null>(null);
+  const [localColor, setLocalColor] = useState<string | null>(null);
 
   // Desktop-only inline order flow (channel picker lives on the page itself
   // instead of only on OrderPage) — default to the seller's first configured
@@ -200,37 +210,48 @@ export function ProductDetailPage() {
   }
 
   const size = localSize ?? (product.sizes?.includes(selectedSize ?? "") ? selectedSize : null);
+  const color = localColor ?? (product.colors?.includes(selectedColor ?? "") ? selectedColor : null);
   const finalPrice = discountedPrice(product.priceKes, product.discountPct);
   const soldOut = product.status === "out";
   const links = merchant ? productInquiryLinks(merchant, product) : null;
 
+  const hasSizes = Boolean(product.sizes?.length);
+  const hasColors = Boolean(product.colors?.length);
+
+  /**
+   * The rule: whatever the seller offers a choice of, the buyer must choose,
+   * before adding to the cart OR placing an order. Returns false and says which
+   * one is missing — "select an option" on a page with two of them is a riddle.
+   */
+  const requireChoices = (): boolean => {
+    const missing = [hasSizes && !size ? "size" : null, hasColors && !color ? "colour" : null]
+      .filter(Boolean)
+      .join(" and ");
+    if (!missing) return true;
+    push(`Please select a ${missing} first`);
+    return false;
+  };
+
   const orderNow = () => {
-    if (product.sizes && !size) {
-      push("Please select a size first");
-      return;
-    }
+    if (!requireChoices()) return;
     setSelectedSize(size);
+    setSelectedColor(color);
     navigate(`/order/${product.id}`);
   };
 
   // Desktop's inline channel picker — same validation as orderNow, plus
   // carries the chosen channel into OrderPage instead of defaulting there.
   const orderViaChannel = () => {
-    if (product.sizes && !size) {
-      push("Please select a size first");
-      return;
-    }
+    if (!requireChoices()) return;
     setSelectedSize(size);
+    setSelectedColor(color);
     setPreferredChannel(desktopChannel);
     navigate(`/order/${product.id}`);
   };
 
 
   const handleAddToCart = () => {
-    if (product.sizes && !size) {
-      push("Please select a size first");
-      return;
-    }
+    if (!requireChoices()) return;
     if (!product.shopSlug) {
       push("Couldn't work out this product's shop — try again", "danger");
       return;
@@ -243,6 +264,7 @@ export function ProductDetailPage() {
         image: product.images[0],
         unitPrice: finalPrice,
         size,
+        color,
         stockQty: product.stockQty,
       },
       qty,
@@ -406,11 +428,25 @@ export function ProductDetailPage() {
                 })
                 : product.description}
             </div>
-            {/* size selector */}
-            {product.sizes && (
+            {/* variant selectors — required before Add / Buy when present */}
+            {hasSizes && (
               <div className="space-y-2">
-                <h2 className="text-sm font-bold text-ink">Select Size</h2>
-                <SizeSelector sizes={product.sizes} value={size} onChange={setLocalSize} />
+                <h2 className="text-sm font-bold text-ink">
+                  Select Size <span className="font-medium text-muted">(required)</span>
+                </h2>
+                <SizeSelector sizes={product.sizes ?? []} value={size} onChange={setLocalSize} />
+              </div>
+            )}
+            {hasColors && (
+              <div className="space-y-2">
+                <h2 className="text-sm font-bold text-ink">
+                  Select Colour <span className="font-medium text-muted">(required)</span>
+                </h2>
+                <ColorSelector
+                  colors={product.colors ?? []}
+                  value={color}
+                  onChange={setLocalColor}
+                />
               </div>
             )}
 

@@ -5,6 +5,7 @@ import { DesktopQuickNav } from "@/components/layout/DesktopQuickNav";
 import { ProductImage } from "@/components/product/ProductImage";
 import { Button } from "@/components/ui/Button";
 import { formatKes } from "@/lib/currency";
+import { variantKey, variantLabel } from "@/lib/variant";
 import { useRemoveFromCart, useSetCartQty } from "@/hooks/useCart";
 import { cartSubtotal, useCart } from "@/stores/cart";
 import { useShopHome } from "@/stores/shop";
@@ -54,7 +55,7 @@ export function CartPage() {
         <div className="space-y-3 lg:flex-1">
           {items.map((item) => (
             <div
-              key={`${item.productId}-${item.size ?? "one"}`}
+              key={`${item.productId}-${variantKey(item.size, item.color)}`}
               className="flex gap-3 rounded-card bg-card p-3 shadow-soft"
             >
               <ProductImage src={item.image} alt={item.name} className="size-20 rounded-xl object-cover" />
@@ -62,13 +63,15 @@ export function CartPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-bold text-ink">{item.name}</p>
-                    {item.size && <p className="text-xs text-muted">Size {item.size}</p>}
+                    {variantLabel(item.size, item.color) && (
+                      <p className="text-xs text-muted">{variantLabel(item.size, item.color)}</p>
+                    )}
                     <p className="text-xs font-semibold text-primary">{formatKes(item.unitPrice)} each</p>
                   </div>
                   <button
                     type="button"
                     aria-label={`Remove ${item.name}`}
-                    onClick={() => remove(item.productId, item.size)}
+                    onClick={() => remove(item.productId, item.size, item.color)}
                     className="flex size-8 items-center justify-center rounded-full text-muted hover:bg-danger/10 hover:text-danger"
                   >
                     <Trash2 className="size-4" />
@@ -82,7 +85,7 @@ export function CartPage() {
                     <button
                       type="button"
                       aria-label="Decrease quantity"
-                      onClick={() => setQty(item.productId, item.size, item.qty - 1)}
+                      onClick={() => setQty(item.productId, item.size, item.color, item.qty - 1)}
                       disabled={item.qty <= 1}
                       className="flex size-7 items-center justify-center rounded-full bg-stone-100 disabled:opacity-40"
                     >
@@ -92,7 +95,7 @@ export function CartPage() {
                     <button
                       type="button"
                       aria-label="Increase quantity"
-                      onClick={() => setQty(item.productId, item.size, item.qty + 1)}
+                      onClick={() => setQty(item.productId, item.size, item.color, item.qty + 1)}
                       disabled={item.qty >= item.stockQty}
                       className="flex size-7 items-center justify-center rounded-full bg-stone-100 disabled:opacity-40"
                     >

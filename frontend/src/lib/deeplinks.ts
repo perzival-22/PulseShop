@@ -1,6 +1,7 @@
 import type { Merchant, Product } from "@/types";
 import type { OrderChannel } from "@/types";
 import { discountedPrice, formatKes } from "./currency";
+import { variantLabel } from "./variant";
 
 /**
  * Pre-filled "ask about this product" links for the detail page contact icons —
@@ -25,7 +26,14 @@ export function productInquiryLinks(merchant: Merchant, product: Product) {
 export function orderLink(
   merchant: Merchant,
   product: Product,
-  opts: { size: string | null; qty: number; name: string; phone: string; notes: string },
+  opts: {
+    size: string | null;
+    color: string | null;
+    qty: number;
+    name: string;
+    phone: string;
+    notes: string;
+  },
   channel: Exclude<OrderChannel, "direct">,
   reference: string,
 ) {
@@ -35,6 +43,7 @@ export function orderLink(
     ``,
     `• ${product.name} (${product.sku})`,
     opts.size ? `• Size: ${opts.size}` : null,
+    opts.color ? `• Colour: ${opts.color}` : null,
     `• Qty: ${opts.qty}`,
     `• Total: ${formatKes(price * opts.qty)}`,
     ``,
@@ -59,7 +68,7 @@ export function orderLink(
 /** Pre-filled order message for a multi-item cart checkout. */
 export function cartOrderLink(
   merchant: Merchant,
-  items: { name: string; size: string | null; qty: number; unitPrice: number }[],
+  items: { name: string; size: string | null; color: string | null; qty: number; unitPrice: number }[],
   opts: { name: string; phone: string; notes: string },
   channel: Exclude<OrderChannel, "direct">,
   reference: string,
@@ -70,9 +79,9 @@ export function cartOrderLink(
     ``,
     ...items.map(
       (i) =>
-        `• ${i.name}${i.size ? ` (Size ${i.size})` : ""} × ${i.qty} — ${formatKes(
-          i.unitPrice * i.qty,
-        )}`,
+        `• ${i.name}${variantLabel(i.size, i.color) ? ` (${variantLabel(i.size, i.color)})` : ""} × ${
+          i.qty
+        } — ${formatKes(i.unitPrice * i.qty)}`,
     ),
     ``,
     `Total: ${formatKes(total)}`,

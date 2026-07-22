@@ -20,6 +20,7 @@ interface OrderItemRow {
   product_name: string;
   image: string | null;
   size: string | null;
+  color: string | null;
   qty: number;
   unit_price_kes: number;
   line_total_kes: number;
@@ -45,6 +46,7 @@ function toOrderLine(i: OrderItemRow): OrderLine {
     productName: i.product_name,
     image: productImageSrc(i.image ? [i.image] : []),
     size: i.size,
+    color: i.color,
     qty: i.qty,
     unitPriceKes: i.unit_price_kes,
     lineTotalKes: i.line_total_kes,
@@ -142,7 +144,7 @@ async function placeOrder(
   customer: { name: string; phone: string; notes?: string },
   channel: OrderChannel,
   payment: { method: PaymentMethod; status: PaymentStatus } | null,
-  items: { productId: string; size: string | null; qty: number }[],
+  items: { productId: string; size: string | null; color: string | null; qty: number }[],
   idempotencyKey: string,
   captchaToken?: string,
 ): Promise<PlacedOrderRef> {
@@ -159,7 +161,12 @@ async function placeOrder(
       customer_notes: customer.notes ?? "",
       channel,
       payment_method: payment?.method ?? null,
-      items: items.map((i) => ({ product_id: i.productId, size: i.size, qty: i.qty })),
+      items: items.map((i) => ({
+        product_id: i.productId,
+        size: i.size,
+        color: i.color,
+        qty: i.qty,
+      })),
     },
   });
 
@@ -196,7 +203,7 @@ export const ordersApi: OrderService = {
       draft.customer,
       draft.channel,
       draft.payment,
-      [{ productId: draft.productId, size: draft.size, qty: draft.qty }],
+      [{ productId: draft.productId, size: draft.size, color: draft.color, qty: draft.qty }],
       draft.idempotencyKey,
       draft.captchaToken,
     );

@@ -4,9 +4,14 @@ import type { CartItem } from "@/types";
 
 export type { CartItem };
 
-/** Same product + same size collapses onto one line. */
-const sameLine = (a: Pick<CartItem, "productId" | "size">, productId: string, size: string | null) =>
-  a.productId === productId && a.size === size;
+/** Same product + same size + same colour collapses onto one line. Two shirts
+ * that differ only in colour are two lines — the seller ships two things. */
+const sameLine = (
+  a: Pick<CartItem, "productId" | "size" | "color">,
+  productId: string,
+  size: string | null,
+  color: string | null,
+) => a.productId === productId && a.size === size && a.color === color;
 
 interface CartState {
   items: CartItem[];
@@ -16,8 +21,8 @@ interface CartState {
    * shop than the current cart, so the UI can tell the shopper.
    */
   add: (item: Omit<CartItem, "qty">, qty?: number) => boolean;
-  setQty: (productId: string, size: string | null, qty: number) => void;
-  remove: (productId: string, size: string | null) => void;
+  setQty: (productId: string, size: string | null, color: string | null, qty: number) => void;
+  remove: (productId: string, size: string | null, color: string | null) => void;
   clear: () => void;
 }
 
@@ -29,11 +34,13 @@ export const useCart = create<CartState>()(
         const current = get().items;
         if (current.length > 0 && current[0].shopSlug !== item.shopSlug) return false;
         set((s) => {
-          const existing = s.items.find((i) => sameLine(i, item.productId, item.size));
+          const existing = s.items.find((i) =>
+            sameLine(i, item.productId, item.size, item.color),
+          );
           if (existing) {
             return {
               items: s.items.map((i) =>
-                sameLine(i, item.productId, item.size)
+                sameLine(i, item.productId, item.size, item.color)
                   ? { ...i, qty: Math.min(i.qty + qty, i.stockQty) }
                   : i,
               ),
@@ -43,17 +50,33 @@ export const useCart = create<CartState>()(
         });
         return true;
       },
-      setQty: (productId, size, qty) =>
+      setQty: (productId, size, color, qty) =>
         set((s) => ({
           items: s.items.map((i) =>
-            sameLine(i, productId, size) ? { ...i, qty: Math.max(1, Math.min(qty, i.stockQty)) } : i,
+            sameLine(i, productId, size, color)
+              ? { ...i, qty: Math.max(1, Math.min(qty, i.stockQty)) }
+              : i,
           ),
         })),
-      remove: (productId, size) =>
-        set((s) => ({ items: s.items.filter((i) => !sameLine(i, productId, size)) })),
+      remove: (productId, size, color) =>
+        set((s) => ({ items: s.items.filter((i) => !sameLine(i, productId, size, color)) })),
       clear: () => set({ items: [] }),
     }),
-    { name: "pulseshop-cart" },
+    {
+      name: "pulseshop-cart",
+      // Lines written before colours existed have no `color` key at all, and
+      // `undefined === null` is false — so every one of them would fail
+      // sameLine() and the shopper's existing cart would render with dead
+      // quantity and remove buttons. Normalise them on read.
+      version: 1,
+      migrate: (persisted) => {
+        const state = persisted as { items?: CartItem[] } | undefined;
+        return {
+          ...state,
+          items: (state?.items ?? []).map((i) => ({ ...i, color: i.color ?? null })),
+        } as CartState;
+      },
+    },
   ),
 );
 

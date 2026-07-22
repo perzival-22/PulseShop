@@ -62,8 +62,14 @@ export function useCartSync() {
   }, [userId]);
 }
 
-function currentLine(productId: string, size: string | null): CartItem | undefined {
-  return useCart.getState().items.find((i) => i.productId === productId && i.size === size);
+function currentLine(
+  productId: string,
+  size: string | null,
+  color: string | null,
+): CartItem | undefined {
+  return useCart
+    .getState()
+    .items.find((i) => i.productId === productId && i.size === size && i.color === color);
 }
 
 /** Adds an item locally (instant) and mirrors it to the server when signed in. */
@@ -74,7 +80,7 @@ export function useAddToCart() {
   return (item: Omit<CartItem, "qty">, qty = 1): boolean => {
     const added = add(item, qty);
     if (added && userId) {
-      const line = currentLine(item.productId, item.size);
+      const line = currentLine(item.productId, item.size, item.color);
       if (line) services.cart.upsertCartItem(line).catch(() => {});
     }
     return added;
@@ -86,10 +92,10 @@ export function useSetCartQty() {
   const setQty = useCart((s) => s.setQty);
   const userId = useAuth((s) => s.session?.id ?? null);
 
-  return (productId: string, size: string | null, qty: number) => {
-    setQty(productId, size, qty);
+  return (productId: string, size: string | null, color: string | null, qty: number) => {
+    setQty(productId, size, color, qty);
     if (!userId) return;
-    const line = currentLine(productId, size);
+    const line = currentLine(productId, size, color);
     if (line) services.cart.upsertCartItem(line).catch(() => {});
   };
 }
@@ -99,9 +105,9 @@ export function useRemoveFromCart() {
   const remove = useCart((s) => s.remove);
   const userId = useAuth((s) => s.session?.id ?? null);
 
-  return (productId: string, size: string | null) => {
-    remove(productId, size);
-    if (userId) services.cart.removeCartItem(productId, size).catch(() => {});
+  return (productId: string, size: string | null, color: string | null) => {
+    remove(productId, size, color);
+    if (userId) services.cart.removeCartItem(productId, size, color).catch(() => {});
   };
 }
 

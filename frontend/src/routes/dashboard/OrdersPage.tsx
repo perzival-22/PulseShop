@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { WhatsAppIcon } from "@/components/ui/BrandIcons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatKes } from "@/lib/currency";
+import { variantLabel } from "@/lib/variant";
 import { toWhatsAppDigits } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 import { services } from "@/services";
@@ -197,7 +198,7 @@ export function OrdersDashboardPage() {
                         <p className="truncate text-sm font-semibold text-ink">{it.productName}</p>
                         <p className="text-xs text-muted">
                           {it.qty} × {formatKes(it.unitPriceKes)}
-                          {it.size ? ` · Size ${it.size}` : ""}
+                          {variantLabel(it.size, it.color) ? ` · ${variantLabel(it.size, it.color)}` : ""}
                         </p>
                       </div>
                       <p className="text-sm font-bold text-ink">{formatKes(it.lineTotalKes)}</p>

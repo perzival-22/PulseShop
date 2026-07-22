@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { discountedPrice, formatKes } from "@/lib/currency";
+import { variantLabel } from "@/lib/variant";
 import { orderLink } from "@/lib/deeplinks";
 import { isValidPhone } from "@/lib/phone";
 import { productImageSrc } from "@/lib/productImage";
@@ -68,7 +69,8 @@ export function OrderPage() {
     enabled: Boolean(shopSlug),
   });
 
-  const { selectedSize, qty, setQty, customer, saveCustomer, preferredChannel } = useOrderStore();
+  const { selectedSize, selectedColor, qty, setQty, customer, saveCustomer, preferredChannel } =
+    useOrderStore();
   const addOrder = useOrderHistory((s) => s.add);
   // Desktop product page lets a buyer pick their channel before they get
   // here — respect it instead of always starting on WhatsApp.
@@ -163,6 +165,7 @@ export function OrderPage() {
       productName: product.name,
       image: productImageSrc(product.images),
       size: selectedSize,
+      color: selectedColor,
       qty,
       totalKes: total,
       channel: ch,
@@ -178,6 +181,7 @@ export function OrderPage() {
     services.orders.submitOrder({
       productId: product.id,
       size: selectedSize,
+      color: selectedColor,
       qty,
       customer: { name: data.name, phone: data.phone, notes: data.notes ?? "" },
       channel: ch,
@@ -209,7 +213,14 @@ export function OrderPage() {
       const { url, message } = orderLink(
         merchant,
         product,
-        { size: selectedSize, qty, name: data.name, phone: data.phone, notes: data.notes ?? "" },
+        {
+          size: selectedSize,
+          color: selectedColor,
+          qty,
+          name: data.name,
+          phone: data.phone,
+          notes: data.notes ?? "",
+        },
         channel,
         reference,
       );
@@ -254,7 +265,10 @@ export function OrderPage() {
               <div>
                 <p className="text-sm font-bold text-ink">{product.name}</p>
                 <p className="text-xs text-muted">
-                  {selectedSize ? `Size ${selectedSize} · ` : ""}Qty {qty}
+                  {variantLabel(selectedSize, selectedColor)
+                    ? `${variantLabel(selectedSize, selectedColor)} · `
+                    : ""}
+                  Qty {qty}
                 </p>
               </div>
               <Link

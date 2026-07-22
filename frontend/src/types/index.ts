@@ -11,6 +11,8 @@ export interface Product {
   status: StockStatus;
   images: string[];
   sizes: string[] | null;
+  /** Colours the seller offers. Null/empty = this product has no colour choice. */
+  colors: string[] | null;
   rating: number;
   reviewCount: number;
   summary: string | null;
@@ -60,6 +62,10 @@ export interface Paged<T> {
 /** The filter aggregates a product list needs but can't derive from one page. */
 export interface ShopFacets {
   categories: string[];
+  /** Every size/colour offered anywhere in the catalogue — the filter's options.
+   * Returned alphabetically; run sizes through sortSizes() before rendering. */
+  sizes: string[];
+  colors: string[];
   priceCeiling: number;
   total: number;
   available: number;
@@ -108,6 +114,7 @@ export interface OrderSubmission {
 export interface OrderDraft extends OrderSubmission {
   productId: string;
   size: string | null;
+  color: string | null;
   qty: number;
   customer: { name: string; phone: string; notes: string };
   channel: OrderChannel;
@@ -117,7 +124,7 @@ export interface OrderDraft extends OrderSubmission {
 /** A multi-item order from the cart checkout. All items belong to one shop. */
 export interface CartOrderDraft extends OrderSubmission {
   shopSlug: string;
-  items: { productId: string; size: string | null; qty: number }[];
+  items: { productId: string; size: string | null; color: string | null; qty: number }[];
   customer: { name: string; phone: string; notes: string };
   channel: OrderChannel;
   payment: null | { method: PaymentMethod; status: PaymentStatus };
@@ -136,7 +143,11 @@ export interface CartItem {
   image: string;
   /** Discounted unit price captured when the item was added. */
   unitPrice: number;
+  /** The chosen variant. Both null when the product offers no choice — together
+   * with productId they identify the cart LINE, so Red-M and Blue-M are two
+   * lines rather than one (see the cart_items primary key, migration 0026). */
   size: string | null;
+  color: string | null;
   qty: number;
   /** Stock at add-time — used to cap the quantity stepper. */
   stockQty: number;
@@ -147,6 +158,7 @@ export interface OrderLine {
   productName: string;
   image: string;
   size: string | null;
+  color: string | null;
   qty: number;
   unitPriceKes: number;
   lineTotalKes: number;

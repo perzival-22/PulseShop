@@ -123,6 +123,7 @@ export interface ProductInput {
   stockQty: number;
   images: string[];
   sizes: string[] | null;
+  colors: string[] | null;
   summary: string | null;
   description: string;
 }
@@ -146,6 +147,13 @@ export interface ProductQuery {
   /** "in-stock" = anything not out of stock. */
   status?: "all" | "in-stock" | "available" | "low" | "out";
   maxPrice?: number | null;
+  /**
+   * Match products available in ANY of these sizes/colours (array overlap, not
+   * containment) — a shopper asking for "M or L" wants both, not products that
+   * stock both. Empty or omitted = no constraint.
+   */
+  sizes?: string[];
+  colors?: string[];
   sort?: "newest" | "price-asc" | "price-desc";
 }
 
@@ -265,11 +273,11 @@ export interface FavoritesService {
  */
 export interface CartService {
   /** The signed-in shopper's cart, hydrated with live product/shop data
-   * (price, stock, name, image) — the stored row only has product_id/size/qty. */
+   * (price, stock, name, image) — the stored row only has the variant + qty. */
   listCart(): Promise<CartItem[]>;
-  /** Insert-or-update one line by (product_id, size) to the given qty. */
+  /** Insert-or-update one line by (product_id, size, color) to the given qty. */
   upsertCartItem(item: CartItem): Promise<void>;
-  removeCartItem(productId: string, size: string | null): Promise<void>;
+  removeCartItem(productId: string, size: string | null, color: string | null): Promise<void>;
   clearCart(): Promise<void>;
 }
 

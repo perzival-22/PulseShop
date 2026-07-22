@@ -1,5 +1,5 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Check, Heart, Package, Search, ShoppingBag, Star, Store } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, Heart, Package, Search, ShoppingBag, SlidersHorizontal, Star, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { useAuth } from "@/stores/auth";
@@ -11,7 +11,9 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { QueryError } from "@/components/common/QueryError";
 import { FollowButton } from "@/components/shop/FollowButton";
 import { SocialLinks } from "@/components/shop/SocialLinks";
+import { Sheet } from "@/components/ui/Modal";
 import { ProductCardSkeleton, Skeleton } from "@/components/ui/Skeleton";
+import { colorHex, sortSizes } from "@/lib/constants";
 import { formatKes } from "@/lib/currency";
 import { merchantSocialLinks } from "@/lib/deeplinks";
 import { cn } from "@/lib/utils";
@@ -44,10 +46,28 @@ export function StorefrontPage() {
   const [search, setSearch] = useState(initialQuery);
   const [searchOpen, setSearchOpen] = useState(Boolean(initialQuery));
 
-  // Desktop-only filters (sidebar) — mobile just has the category pills.
   const [sort, setSort] = useState<SortOrder>("newest");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  // Multi-select: picking M and L means "available in either", which is what a
+  // shopper who wears both means. Server-side (array overlap, migration 0026).
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
+  // Mobile has no room for the sidebar, so the same controls live in a sheet.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const toggleIn = (setter: (fn: (v: string[]) => string[]) => void) => (value: string) =>
+    setter((list) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]));
+
+  const activeFilterCount =
+    sizes.length + colors.length + (availableOnly ? 1 : 0) + (maxPrice !== null ? 1 : 0);
+
+  const clearFilters = () => {
+    setSizes([]);
+    setColors([]);
+    setAvailableOnly(false);
+    setMaxPrice(null);
+  };
 
   const cartItems = useCart((s) => s.items);
   const cartItemCount = cartCount(cartItems);
@@ -70,6 +90,8 @@ export function StorefrontPage() {
     category,
     status: availableOnly ? ("in-stock" as const) : ("all" as const),
     maxPrice,
+    sizes,
+    colors,
     sort,
     pageSize: PAGE_SIZE,
   };
@@ -105,6 +127,90 @@ export function StorefrontPage() {
 
   const categories = ["All", ...(facetsQ.data?.categories ?? [])];
   const priceCeiling = facetsQ.data?.priceCeiling ?? 0;
+  // Only what this shop actually stocks — offering a filter that can only ever
+  // return nothing is worse than offering none.
+  const sizeOptions = sortSizes(facetsQ.data?.sizes ?? []);
+  const colorOptions = facetsQ.data?.colors ?? [];
+
+  /** Size, colour, price and availability — rendered in the desktop sidebar and,
+   * identically, inside the mobile filter sheet. */
+  const filterControls = (
+    <>
+      {sizeOptions.length > 0 && (
+        <div>
+          <h2 className="text-sm font-bold text-ink">Size</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {sizeOptions.map((s) => (
+              <FilterChip
+                key={s}
+                label={s}
+                active={sizes.includes(s)}
+                onClick={() => toggleIn(setSizes)(s)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {colorOptions.length > 0 && (
+        <div>
+          <h2 className="text-sm font-bold text-ink">Colour</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {colorOptions.map((c) => (
+              <FilterChip
+                key={c}
+                label={c}
+                swatch={colorHex(c)}
+                active={colors.includes(c)}
+                onClick={() => toggleIn(setColors)(c)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {priceCeiling > 0 && (
+        <div>
+          <h2 className="text-sm font-bold text-ink">Price Range</h2>
+          <p className="mt-1 text-xs text-muted">
+            {formatKes(0)} to {formatKes(maxPrice ?? priceCeiling)}
+          </p>
+          <input
+            type="range"
+            aria-label="Maximum price"
+            min={0}
+            max={priceCeiling}
+            value={maxPrice ?? priceCeiling}
+            onChange={(e) => setMaxPrice(Number(e.target.value))}
+            className="mt-2 w-full accent-primary"
+          />
+        </div>
+      )}
+
+      <div>
+        <h2 className="text-sm font-bold text-ink">Availability</h2>
+        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-ink">
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(e) => setAvailableOnly(e.target.checked)}
+            className="size-4 rounded accent-primary"
+          />
+          Available only
+        </label>
+      </div>
+
+      {activeFilterCount > 0 && (
+        <button
+          type="button"
+          onClick={clearFilters}
+          className="text-sm font-semibold text-primary hover:underline"
+        >
+          Clear all filters
+        </button>
+      )}
+    </>
+  );
 
   // Merchant fetch failed (DB down, offline) -> explicit retry instead of an
   // infinite skeleton — the `merchant ? … : <Skeleton>` branch below can't
@@ -305,8 +411,31 @@ export function StorefrontPage() {
         )}
       </section>
 
-      {/* category pills — mobile only; desktop uses the sidebar list below */}
+      {/* category pills + filter entry — mobile only; desktop uses the sidebar */}
       <div className="no-scrollbar mt-6 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
+        {(sizeOptions.length > 0 || colorOptions.length > 0 || priceCeiling > 0) && (
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            aria-label={
+              activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : "Filters"
+            }
+            className={cn(
+              "flex min-h-11 flex-shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              activeFilterCount > 0
+                ? "bg-ink text-white"
+                : "bg-card text-muted shadow-soft hover:text-ink",
+            )}
+          >
+            <SlidersHorizontal className="size-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="flex size-5 items-center justify-center rounded-full bg-white/25 text-[11px] font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        )}
         {categories.map((cat) => (
           <button
             key={cat}
@@ -349,35 +478,7 @@ export function StorefrontPage() {
               </ul>
             </div>
 
-            {priceCeiling > 0 && (
-              <div>
-                <h2 className="text-sm font-bold text-ink">Price Range</h2>
-                <p className="mt-1 text-xs text-muted">
-                  {formatKes(0)} to {formatKes(maxPrice ?? priceCeiling)}
-                </p>
-                <input
-                  type="range"
-                  min={0}
-                  max={priceCeiling}
-                  value={maxPrice ?? priceCeiling}
-                  onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  className="mt-2 w-full accent-primary"
-                />
-              </div>
-            )}
-
-            <div>
-              <h2 className="text-sm font-bold text-ink">Availability</h2>
-              <label className="mt-3 flex items-center gap-2 text-sm font-medium text-ink">
-                <input
-                  type="checkbox"
-                  checked={availableOnly}
-                  onChange={(e) => setAvailableOnly(e.target.checked)}
-                  className="size-4 rounded accent-primary"
-                />
-                Available only
-              </label>
-            </div>
+            {filterControls}
           </div>
         </aside>
 
@@ -422,7 +523,7 @@ export function StorefrontPage() {
           ) : (
             <>
               <div
-                key={`${category}-${search}-${sort}-${availableOnly}-${maxPrice}`}
+                key={`${category}-${search}-${sort}-${availableOnly}-${maxPrice}-${sizes}-${colors}`}
                 className="grid grid-cols-2 gap-3 animate-grid-fade lg:grid-cols-3 xl:grid-cols-4"
               >
                 {filtered.map((p) => (
@@ -448,7 +549,57 @@ export function StorefrontPage() {
           )}
         </section>
       </div>
+
+      {/* mobile filters — the same controls as the desktop sidebar */}
+      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen} title="Filters">
+        <div className="space-y-6">
+          {filterControls}
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(false)}
+            className="w-full rounded-btn bg-primary px-6 py-3 text-sm font-bold text-white"
+          >
+            Show {totalMatches} {totalMatches === 1 ? "product" : "products"}
+          </button>
+        </div>
+      </Sheet>
     </MobileShell>
+  );
+}
+
+/** One toggleable filter value. `swatch` paints the colour dot for colours. */
+function FilterChip({
+  label,
+  active,
+  onClick,
+  swatch,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  swatch?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex min-h-9 items-center gap-1.5 rounded-btn border-2 px-2.5 text-sm font-semibold transition-colors",
+        active
+          ? "border-primary bg-primary text-white"
+          : "border-stone-200 bg-card text-ink hover:border-primary/50",
+      )}
+    >
+      {swatch && (
+        <span
+          aria-hidden
+          style={{ backgroundColor: swatch }}
+          className="size-4 shrink-0 rounded-full ring-1 ring-inset ring-black/15"
+        />
+      )}
+      {label}
+    </button>
   );
 }
 

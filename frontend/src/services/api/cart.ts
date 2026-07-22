@@ -10,6 +10,7 @@ import { requireUserId, supabase } from "./client";
 interface CartRow {
   product_id: string;
   size: string;
+  color: string;
   qty: number;
   products: {
     name: string;
@@ -35,6 +36,7 @@ function hydrate(row: CartRow): CartItem | null {
     image: productImageSrc(p.images),
     unitPrice: discountedPrice(p.price_kes, p.discount_pct),
     size: row.size || null,
+    color: row.color || null,
     qty: row.qty,
     stockQty: p.stock_qty,
   };
@@ -51,7 +53,7 @@ export const cartApi: CartService = {
     const { data, error } = await supabase
       .from("cart_items")
       .select(
-        "product_id, size, qty, products(name, images, price_kes, discount_pct, stock_qty, merchants(handle))",
+        "product_id, size, color, qty, products(name, images, price_kes, discount_pct, stock_qty, merchants(handle))",
       )
       .eq("user_id", uid);
     if (error) throw error;
@@ -62,18 +64,25 @@ export const cartApi: CartService = {
     const uid = await requireUserId();
     const { error } = await supabase
       .from("cart_items")
-      .upsert({ user_id: uid, product_id: item.productId, size: item.size ?? "", qty: item.qty });
+      .upsert({
+        user_id: uid,
+        product_id: item.productId,
+        size: item.size ?? "",
+        color: item.color ?? "",
+        qty: item.qty,
+      });
     if (error) throw error;
   },
 
-  async removeCartItem(productId: string, size: string | null): Promise<void> {
+  async removeCartItem(productId: string, size: string | null, color: string | null): Promise<void> {
     const uid = await requireUserId();
     const { error } = await supabase
       .from("cart_items")
       .delete()
       .eq("user_id", uid)
       .eq("product_id", productId)
-      .eq("size", size ?? "");
+      .eq("size", size ?? "")
+      .eq("color", color ?? "");
     if (error) throw error;
   },
 

@@ -11,6 +11,7 @@ import { useAddToCart } from "@/hooks/useCart";
 import { useFavoriteToggle } from "@/hooks/useFavorites";
 import { useFavorites } from "@/stores/favorites";
 import { useToasts } from "@/stores/toast";
+import { ColorSelector } from "./ColorSelector";
 import { ProductImage } from "./ProductImage";
 import { SizeSelector } from "./SizeSelector";
 import { StockBadge } from "./StockBadge";
@@ -21,14 +22,18 @@ export function ProductCard({ product, className }: { product: Product; classNam
   const addToCart = useAddToCart();
   const push = useToasts((s) => s.push);
 
-  const [sizeSheetOpen, setSizeSheetOpen] = useState(false);
+  const [variantSheetOpen, setVariantSheetOpen] = useState(false);
   const [chosenSize, setChosenSize] = useState<string | null>(null);
+  const [chosenColor, setChosenColor] = useState<string | null>(null);
 
   const soldOut = product.status === "out";
   const finalPrice = discountedPrice(product.priceKes, product.discountPct);
   const hasSizes = !!product.sizes && product.sizes.length > 0;
+  const hasColors = !!product.colors && product.colors.length > 0;
+  /** A one-tap add is only honest when there's nothing left to choose. */
+  const needsChoice = hasSizes || hasColors;
 
-  const add = (size: string | null) => {
+  const add = (size: string | null, color: string | null) => {
     if (!product.shopSlug) {
       push("Couldn't work out this product's shop — try again", "danger");
       return;
@@ -40,6 +45,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
       image: productImageSrc(product.images),
       unitPrice: finalPrice,
       size,
+      color,
       stockQty: product.stockQty,
     });
     if (!added) {
@@ -50,13 +56,18 @@ export function ProductCard({ product, className }: { product: Product; classNam
   };
 
   const onAddClick = () => {
-    if (hasSizes) {
+    if (needsChoice) {
       setChosenSize(null);
-      setSizeSheetOpen(true);
+      setChosenColor(null);
+      setVariantSheetOpen(true);
     } else {
-      add(null);
+      add(null, null);
     }
   };
+
+  // Every choice the seller offers has to be made — a size-only product needs a
+  // size, a size-and-colour product needs both.
+  const choiceComplete = (!hasSizes || chosenSize) && (!hasColors || chosenColor);
 
   return (
     <div
@@ -126,7 +137,9 @@ export function ProductCard({ product, className }: { product: Product; classNam
       {!soldOut && (
         <button
           type="button"
-          aria-label={hasSizes ? `Choose size for ${product.name}` : `Add ${product.name} to cart`}
+            aria-label={
+            needsChoice ? `Choose options for ${product.name}` : `Add ${product.name} to cart`
+          }
           onClick={onAddClick}
           className="absolute bottom-2.5 right-2.5 flex size-9 items-center justify-center rounded-full bg-primary text-white shadow-soft transition-transform active:scale-90 hover:bg-primary-deep"
         >
@@ -134,8 +147,12 @@ export function ProductCard({ product, className }: { product: Product; classNam
         </button>
       )}
 
-      {hasSizes && (
-        <Sheet open={sizeSheetOpen} onOpenChange={setSizeSheetOpen} title="Select a size">
+      {needsChoice && (
+        <Sheet
+          open={variantSheetOpen}
+          onOpenChange={setVariantSheetOpen}
+          title={hasSizes && hasColors ? "Choose size and colour" : hasSizes ? "Select a size" : "Select a colour"}
+        >
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <ProductImage
@@ -148,14 +165,33 @@ export function ProductCard({ product, className }: { product: Product; classNam
                 <p className="text-sm font-extrabold text-primary">{formatKes(finalPrice)}</p>
               </div>
             </div>
-            <SizeSelector sizes={product.sizes ?? []} value={chosenSize} onChange={setChosenSize} />
+            {hasSizes && (
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-ink">Size</p>
+                <SizeSelector
+                  sizes={product.sizes ?? []}
+                  value={chosenSize}
+                  onChange={setChosenSize}
+                />
+              </div>
+            )}
+            {hasColors && (
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-ink">Colour</p>
+                <ColorSelector
+                  colors={product.colors ?? []}
+                  value={chosenColor}
+                  onChange={setChosenColor}
+                />
+              </div>
+            )}
             <Button
               size="lg"
               className="w-full"
-              disabled={!chosenSize}
+              disabled={!choiceComplete}
               onClick={() => {
-                add(chosenSize);
-                setSizeSheetOpen(false);
+                add(chosenSize, chosenColor);
+                setVariantSheetOpen(false);
               }}
             >
               <ShoppingBag className="size-5" />

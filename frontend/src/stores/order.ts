@@ -10,14 +10,16 @@ interface CustomerInfo {
 type OrderChannel = "whatsapp" | "instagram" | "facebook";
 
 interface OrderState {
-  /** Size selected on the product detail page, carried into the order form. */
+  /** Variant selected on the product detail page, carried into the order form. */
   selectedSize: string | null;
+  selectedColor: string | null;
   qty: number;
   customer: CustomerInfo;
   /** Channel picked inline on the desktop product page — OrderPage uses this
    * as its initial selection instead of always defaulting to WhatsApp. */
   preferredChannel: OrderChannel | null;
   setSelectedSize: (size: string | null) => void;
+  setSelectedColor: (color: string | null) => void;
   setQty: (qty: number) => void;
   saveCustomer: (customer: CustomerInfo) => void;
   setPreferredChannel: (channel: OrderChannel | null) => void;
@@ -36,14 +38,17 @@ export const useOrderStore = create<OrderState>()(
   persist(
     (set) => ({
       selectedSize: null,
+      selectedColor: null,
       qty: 1,
       customer: { name: "", phone: "", notes: "" },
       preferredChannel: null,
       setSelectedSize: (selectedSize) => set({ selectedSize }),
+      setSelectedColor: (selectedColor) => set({ selectedColor }),
       setQty: (qty) => set({ qty: Math.max(1, qty) }),
       saveCustomer: (customer) => set({ customer }),
       setPreferredChannel: (preferredChannel) => set({ preferredChannel }),
-      resetDraft: () => set({ selectedSize: null, qty: 1, preferredChannel: null }),
+      resetDraft: () =>
+        set({ selectedSize: null, selectedColor: null, qty: 1, preferredChannel: null }),
       clearCustomer: () => set({ customer: { name: "", phone: "", notes: "" } }),
     }),
     {

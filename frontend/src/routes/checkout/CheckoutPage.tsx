@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatKes } from "@/lib/currency";
+import { variantKey, variantLabel } from "@/lib/variant";
 import { cartOrderLink } from "@/lib/deeplinks";
 import { isValidPhone } from "@/lib/phone";
 import { cn } from "@/lib/utils";
@@ -147,6 +148,7 @@ export function CheckoutPage() {
         productName: item.name,
         image: item.image,
         size: item.size,
+        color: item.color,
         qty: item.qty,
         totalKes: item.unitPrice * item.qty,
         channel: ch,
@@ -162,7 +164,12 @@ export function CheckoutPage() {
   const createOrder = (data: { name: string; phone: string; notes?: string }, ch: Channel | "direct") =>
     services.orders.submitCartOrder({
       shopSlug,
-      items: items.map((i) => ({ productId: i.productId, size: i.size, qty: i.qty })),
+      items: items.map((i) => ({
+        productId: i.productId,
+        size: i.size,
+        color: i.color,
+        qty: i.qty,
+      })),
       customer: { name: data.name, phone: data.phone, notes: data.notes ?? "" },
       channel: ch,
       payment: null,
@@ -193,7 +200,13 @@ export function CheckoutPage() {
       // once payment succeeds, so there's no separate "send order" step.
       const { url, message } = cartOrderLink(
         merchant,
-        items.map((i) => ({ name: i.name, size: i.size, qty: i.qty, unitPrice: i.unitPrice })),
+        items.map((i) => ({
+          name: i.name,
+          size: i.size,
+          color: i.color,
+          qty: i.qty,
+          unitPrice: i.unitPrice,
+        })),
         { name: data.name, phone: data.phone, notes: data.notes ?? "" },
         channel,
         reference,
@@ -240,14 +253,15 @@ export function CheckoutPage() {
           <h2 className="text-sm font-bold text-ink">Order summary</h2>
           {items.map((item) => (
             <div
-              key={`${item.productId}-${item.size ?? "one"}`}
+              key={`${item.productId}-${variantKey(item.size, item.color)}`}
               className="flex items-center gap-3"
             >
               <ProductImage src={item.image} alt={item.name} className="size-12 rounded-lg object-cover" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-ink">{item.name}</p>
                 <p className="text-xs text-muted">
-                  {item.size ? `Size ${item.size} · ` : ""}Qty {item.qty}
+                  {variantLabel(item.size, item.color) ? `${variantLabel(item.size, item.color)} · ` : ""}
+                  Qty {item.qty}
                 </p>
               </div>
               <p className="text-sm font-bold text-ink">{formatKes(item.unitPrice * item.qty)}</p>

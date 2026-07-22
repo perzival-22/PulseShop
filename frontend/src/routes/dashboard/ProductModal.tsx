@@ -8,7 +8,15 @@ import { ProductImage } from "@/components/product/ProductImage";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { CATEGORY_GROUPS, categoryHasSizes, isLegacyCategory } from "@/lib/constants";
+import {
+  CATEGORY_GROUPS,
+  PRODUCT_COLORS,
+  categoryHasSizes,
+  colorHex,
+  isLegacyCategory,
+  sizeOptionsFor,
+  sortSizes,
+} from "@/lib/constants";
 import { generateProductKey } from "@/lib/productKey";
 import { cn, isUniqueViolation } from "@/lib/utils";
 import { services, type ProductInput } from "@/services";
@@ -70,7 +78,7 @@ export function ProductModal({
 
   const [images, setImages] = useState<string[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
-  const [sizeInput, setSizeInput] = useState("");
+  const [colors, setColors] = useState<string[]>([]);
   // Kept as text, not a number: a merchant restocking 240 units types over the
   // field, and a numeric state would force the intermediate empty string back to
   // 0 mid-keystroke. Parsed once, on submit.
@@ -104,6 +112,7 @@ export function ProductModal({
       });
       setImages(product.images);
       setSizes(product.sizes ?? []);
+      setColors(product.colors ?? []);
       setStockQty(String(product.stockQty));
       // An existing product keeps the key it was created with — it's already on
       // the buyer's order messages and the merchant's own records.
@@ -112,6 +121,7 @@ export function ProductModal({
       reset({ name: "", category: "", priceKes: 0, discountPct: null, summary: "", description: "" });
       setImages([]);
       setSizes([]);
+      setColors([]);
       setStockQty("0");
       setProductKey(generateProductKey());
     }
@@ -153,11 +163,24 @@ export function ProductModal({
     [push],
   );
 
-  const addSize = () => {
-    const v = sizeInput.trim().toUpperCase();
-    if (v && !sizes.includes(v)) setSizes((s) => [...s, v]);
-    setSizeInput("");
-  };
+  const toggle = (setter: typeof setSizes, list: string[]) => (value: string) =>
+    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+
+  const toggleSize = toggle(setSizes, sizes);
+  const toggleColor = toggle(setColors, colors);
+
+  /**
+   * The preset for this category, plus any size already on the product that
+   * isn't in it. Products predate the preset (free text: "S", "26", "XS") and a
+   * merchant also reclassifies things — switching Footwear to Men's Clothing
+   * would otherwise silently drop "42" from a listing on the next save. Showing
+   * it as one more selected chip lets them decide.
+   */
+  const sizeOptions = (() => {
+    const preset = sizeOptionsFor(category);
+    const extras = sizes.filter((s) => !preset.includes(s));
+    return [...preset, ...sortSizes(extras)];
+  })();
 
   const mutation = useMutation({
     mutationFn: (input: ProductInput) =>
@@ -181,7 +204,8 @@ export function ProductModal({
       discountPct: data.discountPct || null,
       stockQty: stockNumber,
       images,
-      sizes: categoryHasSizes(data.category) && sizes.length ? sizes : null,
+      sizes: categoryHasSizes(data.category) && sizes.length ? sortSizes(sizes) : null,
+      colors: colors.length ? colors : null,
       summary: data.summary || null,
       description: data.description ?? "",
     });
@@ -349,45 +373,84 @@ export function ProductModal({
             {...register("discountPct")}
           />
 
-          {/* sizes tag input — only meaningful for clothing/footwear categories */}
+          {/* Sizes — a fixed preset per category, not free text. Typed sizes
+              ("L" / "l" / "Large") can't be aggregated, which is what made the
+              buyer's size filter impossible before. Only shown for categories
+              where a size means something. */}
           {categoryHasSizes(category) && (
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <label htmlFor="size-input" className="text-sm font-semibold text-ink">
-                Sizes
-              </label>
-              <div className="flex flex-wrap items-center gap-2 rounded-btn border border-stone-200 bg-card p-2">
-                {sizes.map((s) => (
-                  <span
-                    key={s}
-                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary"
-                  >
-                    {s}
+            <fieldset className="col-span-2 flex flex-col gap-1.5">
+              <legend className="mb-1.5 text-sm font-semibold text-ink">
+                Available sizes{" "}
+                <span className="font-medium text-muted">— tap the ones you stock</span>
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {sizeOptions.map((s) => {
+                  const on = sizes.includes(s);
+                  return (
                     <button
+                      key={s}
                       type="button"
-                      aria-label={`Remove size ${s}`}
-                      onClick={() => setSizes((arr) => arr.filter((x) => x !== s))}
+                      aria-pressed={on}
+                      onClick={() => toggleSize(s)}
+                      className={cn(
+                        "flex h-10 min-w-12 items-center justify-center rounded-btn border-2 px-3 text-sm font-semibold transition-colors",
+                        on
+                          ? "border-primary bg-primary text-white"
+                          : "border-stone-200 bg-card text-ink hover:border-primary/50",
+                      )}
                     >
-                      <X className="size-3" />
+                      {s}
                     </button>
-                  </span>
-                ))}
-                <input
-                  id="size-input"
-                  value={sizeInput}
-                  onChange={(e) => setSizeInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault();
-                      addSize();
-                    }
-                  }}
-                  onBlur={addSize}
-                  placeholder={sizes.length ? "" : "Type a size and press Enter (leave empty for none)"}
-                  className="h-8 min-w-32 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted/60"
-                />
+                  );
+                })}
               </div>
-            </div>
+              <p className="text-xs text-muted">
+                {sizes.length
+                  ? "Buyers must pick one of these before they can order."
+                  : "Leave all unselected if this product has no sizes."}
+              </p>
+            </fieldset>
           )}
+
+          {/* Colours — offered for every category: a phone case, a mug and a
+              jacket all come in colours. Optional, like sizes. */}
+          <fieldset className="col-span-2 flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-sm font-semibold text-ink">
+              Available colours{" "}
+              <span className="font-medium text-muted">— tap the ones you stock</span>
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {PRODUCT_COLORS.map(({ name }) => {
+                const on = colors.includes(name);
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleColor(name)}
+                    className={cn(
+                      "flex h-10 items-center gap-2 rounded-btn border-2 pl-2 pr-3 text-sm font-semibold transition-colors",
+                      on
+                        ? "border-primary bg-primary text-white"
+                        : "border-stone-200 bg-card text-ink hover:border-primary/50",
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      style={{ backgroundColor: colorHex(name) }}
+                      className="size-5 shrink-0 rounded-full ring-1 ring-inset ring-black/15"
+                    />
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted">
+              {colors.length
+                ? "Buyers must pick one of these before they can order."
+                : "Leave all unselected if this product only comes one way."}
+            </p>
+          </fieldset>
 
           {/* stock counter + DB sync indicator. The +/- buttons are for nudging a
               number that's nearly right; the field between them is typeable, so

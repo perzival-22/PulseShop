@@ -68,6 +68,11 @@ function searchArgs(merchantId: string | null, q: ProductQuery = {}) {
     p_category: q.category && q.category !== "All" ? q.category : null,
     p_status: q.status && q.status !== "all" ? q.status : null,
     p_max_price: q.maxPrice ?? null,
+    // Null rather than [] for "no constraint": the SQL treats an empty array the
+    // same way, but null is what the parameter's default says and keeps an
+    // unfiltered call byte-identical to the pre-0026 one.
+    p_sizes: q.sizes?.length ? q.sizes : null,
+    p_colors: q.colors?.length ? q.colors : null,
     p_sort: q.sort ?? "newest",
     p_limit: pageSize,
     p_offset: (page - 1) * pageSize,
@@ -185,6 +190,8 @@ export const productsApi: ProductService = {
     const f = (data ?? {}) as Partial<ShopFacets>;
     return {
       categories: f.categories ?? [],
+      sizes: f.sizes ?? [],
+      colors: f.colors ?? [],
       priceCeiling: Number(f.priceCeiling ?? 0),
       total: Number(f.total ?? 0),
       available: Number(f.available ?? 0),

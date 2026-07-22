@@ -100,6 +100,11 @@ function queryProducts(all: Product[], q: ProductQuery = {}): Paged<Product> {
   // when they filter or sort by price. See migration 0023.
   const price = (p: Product) => discountedPrice(p.priceKes, p.discountPct);
   if (q.maxPrice != null) list = list.filter((p) => price(p) <= q.maxPrice!);
+  // Array OVERLAP, not containment — "M or L" means either. Mirrors the `&&`
+  // in search_products (migration 0026); drift here is a bug you only ever see
+  // against the real backend.
+  if (q.sizes?.length) list = list.filter((p) => p.sizes?.some((s) => q.sizes!.includes(s)));
+  if (q.colors?.length) list = list.filter((p) => p.colors?.some((c) => q.colors!.includes(c)));
 
   list = [...list];
   if (q.sort === "price-asc") list.sort((a, b) => price(a) - price(b));
@@ -209,12 +214,13 @@ const minsAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
 
 /** A few received orders so the merchant dashboard isn't empty in mock mode. */
 function seedOrders(): MerchantOrder[] {
-  const line = (p: Product, qty: number, size: string | null) => {
+  const line = (p: Product, qty: number, size: string | null, color: string | null = null) => {
     const unit = discountedPrice(p.priceKes, p.discountPct);
     return {
       productName: p.name,
       image: productImageSrc(p.images),
       size,
+      color,
       qty,
       unitPriceKes: unit,
       lineTotalKes: unit * qty,
@@ -223,8 +229,8 @@ function seedOrders(): MerchantOrder[] {
   const total = (items: MerchantOrder["items"]) =>
     items.reduce((s, i) => s + i.lineTotalKes, 0);
 
-  const o1 = [line(PRODUCTS[7], 1, "M")];
-  const o2 = [line(PRODUCTS[0], 2, "L"), line(PRODUCTS[4], 1, "28")];
+  const o1 = [line(PRODUCTS[7], 1, "M", "Black")];
+  const o2 = [line(PRODUCTS[0], 2, "L", "White"), line(PRODUCTS[4], 1, "28")];
   const o3 = [line(PRODUCTS[10], 1, null)];
 
   return [
@@ -277,10 +283,11 @@ function loadIds(key: string): string[] {
   }
 }
 
-/** A cart_items row (product_id/size/qty only — see migration 0025). */
+/** A cart_items row (variant + qty only — see migrations 0025/0026). */
 interface MockCartRow {
   productId: string;
   size: string;
+  color: string;
   qty: number;
 }
 
@@ -301,7 +308,7 @@ function saveCartRows(rows: MockCartRow[]) {
 }
 
 /** Re-derives price/stock/name/image from the live product, same as the real
- * adapter's join — a stored row only has product_id/size/qty. Null when the
+ * adapter's join — a stored row only has the variant + qty. Null when the
  * product no longer exists. */
 function hydrateCartRow(row: MockCartRow): CartItem | null {
   const p = products.find((p) => p.id === row.productId);
@@ -313,6 +320,7 @@ function hydrateCartRow(row: MockCartRow): CartItem | null {
     image: productImageSrc(p.images),
     unitPrice: discountedPrice(p.priceKes, p.discountPct),
     size: row.size || null,
+    color: row.color || null,
     qty: row.qty,
     stockQty: p.stockQty,
   };
@@ -503,6 +511,8 @@ export const mockServices: Services = {
       await delay();
       return {
         categories: [...new Set(products.map((p) => p.category))].sort(),
+        sizes: [...new Set(products.flatMap((p) => p.sizes ?? []))].sort(),
+        colors: [...new Set(products.flatMap((p) => p.colors ?? []))].sort(),
         // Ceiling of the DISCOUNTED prices — it's the top of the price slider,
         // whose value is handed straight back to the discount-aware filter.
         priceCeiling: Math.max(0, ...products.map((p) => discountedPrice(p.priceKes, p.discountPct))),
@@ -527,6 +537,7 @@ export const mockServices: Services = {
               productName: p.name,
               image: productImageSrc(p.images),
               size: draft.size,
+              color: draft.color,
               qty: draft.qty,
               unitPriceKes: discountedPrice(p.priceKes, p.discountPct),
               lineTotalKes: discountedPrice(p.priceKes, p.discountPct) * draft.qty,
@@ -571,6 +582,7 @@ export const mockServices: Services = {
           productName: p.name,
           image: productImageSrc(p.images),
           size: item.size,
+          color: item.color,
           qty: item.qty,
           unitPriceKes: unit,
           lineTotalKes: unit * item.qty,
@@ -809,17 +821,29 @@ export const mockServices: Services = {
       await delay();
       const rows = loadCartRows();
       const size = item.size ?? "";
-      const idx = rows.findIndex((r) => r.productId === item.productId && r.size === size);
-      const row = { productId: item.productId, size, qty: item.qty };
+      const color = item.color ?? "";
+      const idx = rows.findIndex(
+        (r) => r.productId === item.productId && r.size === size && r.color === color,
+      );
+      const row = { productId: item.productId, size, color, qty: item.qty };
       if (idx !== -1) rows[idx] = row;
       else rows.push(row);
       saveCartRows(rows);
     },
 
-    async removeCartItem(productId: string, size: string | null): Promise<void> {
+    async removeCartItem(
+      productId: string,
+      size: string | null,
+      color: string | null,
+    ): Promise<void> {
       await delay();
-      const target = size ?? "";
-      saveCartRows(loadCartRows().filter((r) => !(r.productId === productId && r.size === target)));
+      const s = size ?? "";
+      const c = color ?? "";
+      saveCartRows(
+        loadCartRows().filter(
+          (r) => !(r.productId === productId && r.size === s && r.color === c),
+        ),
+      );
     },
 
     async clearCart(): Promise<void> {
