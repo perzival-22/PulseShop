@@ -73,7 +73,7 @@ export function PricesPage() {
                 ) : (
                   <>
                     <Button size="lg" className="w-full" disabled>
-                      {tier.cta} — Coming soon
+                      {tier.cta}, Coming soon
                     </Button>
                     <p className="mt-2 text-center text-xs font-medium text-muted">
                       Billing launches soon. Start free today and upgrade later.
@@ -201,11 +201,11 @@ export function PricesPage() {
             Every shop starts free.
           </h2>
           <p className="max-w-sm text-sm text-ink/70">
-            Open your shop on Explorer today — upgrade whenever your catalogue outgrows it.
+            Open your shop on Explorer today, upgrade whenever your catalogue outgrows it.
           </p>
           <Link to="/signup">
             <Button size="lg" className="rounded-full">
-              Create your shop <ArrowRight className="size-5" />
+              Open your Shop <ArrowRight className="size-5" />
             </Button>
           </Link>
           <p className="text-xs font-medium text-muted">

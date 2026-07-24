@@ -149,6 +149,8 @@ export interface ProductInput {
   colors: string[] | null;
   sizePriceAdj: Record<string, number>;
   colorPriceAdj: Record<string, number>;
+  /** See Product.colorImages. Omit to leave unchanged on update. */
+  colorImages?: Record<string, string>;
   summary: string | null;
   description: string;
 }

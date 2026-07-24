@@ -23,7 +23,7 @@ import { MarketingShell } from "./MarketingShell";
 const steps = [
   {
     icon: ShoppingBag,
-    title: "Create your shop",
+    title: "Open your Shop",
     body: "Name it, pick your link, add your first products in minutes.",
   },
   {
@@ -84,7 +84,7 @@ export function LandingPage() {
           <div className="mt-7 flex flex-wrap gap-3">
             <Link to="/signup">
               <Button size="lg" className="rounded-full">
-                Create your shop <ArrowRight className="size-5" />
+                Open your Shop <ArrowRight className="size-5" />
               </Button>
             </Link>
             <Link to="/login">
@@ -160,7 +160,7 @@ export function LandingPage() {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link to="/signup">
               <Button size="lg" className="rounded-full">
-                Create your shop <ArrowRight className="size-5" />
+                Open your Shop <ArrowRight className="size-5" />
               </Button>
             </Link>
             <Link to="/prices">

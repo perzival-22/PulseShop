@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { PRODUCT_IMAGE_FALLBACK } from "@/lib/productImage";
 import { ProductImage } from "./ProductImage";
@@ -9,6 +9,7 @@ export function Gallery({
   frameClassName = "aspect-square",
   thumbnails = true,
   thumbnailsClassName,
+  focusIndex,
 }: {
   images: string[];
   alt: string;
@@ -20,6 +21,13 @@ export function Gallery({
   /** Extra classes on the thumbnail strip — e.g. responsive display toggles
    *  when a page wants thumbnails at some breakpoints but not others. */
   thumbnailsClassName?: string;
+  /**
+   * Jump the gallery to this image index — e.g. the photo the seller matched
+   * to a colour the buyer just picked. Undefined leaves the gallery wherever
+   * the shopper left it (a colour with no matched photo shouldn't yank them
+   * back to image 1).
+   */
+  focusIndex?: number;
 }) {
   const safeImages = images.length > 0 ? images : [PRODUCT_IMAGE_FALLBACK];
   const [active, setActive] = useState(0);
@@ -30,6 +38,13 @@ export function Gallery({
     const track = trackRef.current;
     if (track) track.scrollTo({ left: idx * track.clientWidth, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    if (focusIndex !== undefined && focusIndex >= 0 && focusIndex < safeImages.length) {
+      scrollTo(focusIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusIndex]);
 
   const onScroll = () => {
     const track = trackRef.current;

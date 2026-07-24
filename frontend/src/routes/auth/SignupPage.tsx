@@ -114,7 +114,7 @@ export function SignupPage() {
 
   return (
     <AuthShell
-      title="Create your shop"
+      title="Open your Shop"
       subtitle="Set up your storefront and connect the apps you sell on."
       footer={
         <>

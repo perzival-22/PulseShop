@@ -10,12 +10,17 @@ const FOUNDERS = [
   {
     initials: "RG",
     name: "Raynald Gitau",
-    role: "Founder",
+    role: "CEO and Founder",
   },
   {
     initials: "WK",
     name: "Wilch Kelvin",
     role: "Co-founder",
+  },
+  {
+    initials: "OA",
+    name: "Ohawa Alex",
+    role: "Head of Marketing",
   },
 ];
 
@@ -23,12 +28,12 @@ const VALUES = [
   {
     icon: Store,
     title: "Local shops first",
-    body: "PulseShop is built for the seller posting from their phone between customers — not for enterprises. If a feature doesn't help a local shop sell more, it doesn't ship.",
+    body: "PulseShop is built for the seller posting from their phone between customers, not for enterprises. If a feature doesn't help a local shop sell more, it doesn't ship.",
   },
   {
     icon: MessageCircle,
     title: "Meet buyers where they are",
-    body: "Kenyans already shop through WhatsApp, Instagram and Facebook. We don't ask anyone to change how they buy — we put a real storefront behind the conversations already happening.",
+    body: "Kenyans already shop through WhatsApp, Instagram and Facebook. We don't ask anyone to change how they buy, we put a real storefront behind the conversations already happening.",
   },
   {
     icon: HeartHandshake,
@@ -57,8 +62,8 @@ export function AboutPage() {
       <section className="mx-auto max-w-2xl space-y-5 px-5 py-8 text-base leading-relaxed text-ink/80">
         <p>
           PulseShop began with a simple observation: e-commerce was booming everywhere, yet
-          the local shops we knew — the sellers posting products to their status every
-          morning, taking orders in their DMs — were being left out of it. The tools built
+          the local shops we knew, the sellers posting products to their status every
+          morning, taking orders in their DMs, were being left out of it. The tools built
           for online selling assumed a warehouse, a card machine and a marketing team.
           Their customers, meanwhile, were already shopping on WhatsApp, Instagram and
           Facebook.
@@ -67,13 +72,13 @@ export function AboutPage() {
           Inspired by that wave of trending e-commerce, founder{" "}
           <strong className="font-bold text-ink">Raynald Gitau</strong> and co-founder{" "}
           <strong className="font-bold text-ink">Wilch Kelvin</strong> set out to close the
-          gap — to give every local shop a real storefront that lives right behind the
+          gap, to give every local shop a real storefront that lives right behind the
           social posts they already make, so evolving into the new generation of online
           shopping takes minutes, not months.
         </p>
         <p>
           Today that idea is PulseShop: a link you drop in your bio that opens into a full
-          catalogue, takes orders straight to your chats, and grows with your shop — from
+          catalogue, takes orders straight to your chats, and grows with your shop, from
           the first five products to a storefront that shows up in search results.
         </p>
       </section>
@@ -81,7 +86,7 @@ export function AboutPage() {
       {/* founders */}
       <section className="mx-auto max-w-4xl px-5 py-8">
         <h2 className="text-center text-2xl font-extrabold text-ink">The team</h2>
-        <div className="mx-auto mt-6 grid max-w-lg gap-4 sm:grid-cols-2">
+        <div className="mx-auto mt-6 grid max-w-2xl gap-4 sm:grid-cols-3">
           {FOUNDERS.map((person) => (
             <div key={person.name} className="glass flex flex-col items-center rounded-card p-6 text-center">
               <div className="flex size-16 items-center justify-center rounded-full bg-primary/15 text-xl font-extrabold text-primary">
@@ -121,7 +126,7 @@ export function AboutPage() {
           </p>
           <Link to="/signup">
             <Button size="lg" className="rounded-full">
-              Create your shop <ArrowRight className="size-5" />
+              Open your Shop <ArrowRight className="size-5" />
             </Button>
           </Link>
         </div>

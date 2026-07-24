@@ -286,6 +286,12 @@ export function ProductDetailPage() {
   const hasSizes = Boolean(product.sizes?.length);
   const hasColors = Boolean(product.colors?.length);
 
+  // The photo the seller matched to the chosen colour, if any — jumps the
+  // gallery straight to it instead of leaving the buyer on whichever photo
+  // happened to load first for a colour that looks nothing like it.
+  const matchedColorImage = color ? product.colorImages?.[color] : undefined;
+  const colorImageIndex = matchedColorImage ? product.images.indexOf(matchedColorImage) : undefined;
+
   /**
    * The headline price tracks the selection. Anything not yet chosen counts at
    * its CHEAPEST option and the figure is labelled "from", so it only ever
@@ -456,6 +462,7 @@ export function ProductDetailPage() {
             frameClassName="mx-auto aspect-square w-full max-w-[320px] lg:mx-0 lg:max-w-md"
             thumbnails
             thumbnailsClassName="hidden lg:flex"
+            focusIndex={colorImageIndex}
           />
 
           {/* info + desktop order panel */}
@@ -620,14 +627,15 @@ export function ProductDetailPage() {
                 <div className="flex items-center gap-3">
                   <Button
                     size="lg"
-                    className="max-w-sm flex-1"
+                    className="flex-1"
                     onClick={orderViaChannel}
                     disabled={!desktopChannel}
                   >
                     Order Now
                   </Button>
-                  <Button variant="outline" size="lg" onClick={handleAddToCart} aria-label="Add to cart">
+                  <Button variant="outline" size="lg" className="flex-[1.15]" onClick={handleAddToCart}>
                     <ShoppingBag className="size-5" />
+                    Add to Cart
                   </Button>
                 </div>
 

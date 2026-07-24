@@ -114,6 +114,9 @@ export function ProductModal({
   const [images, setImages] = useState<string[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>([]);
+  // Which uploaded photo shows each colour. A colour with no entry here just
+  // shows the gallery's default order when the buyer picks it.
+  const [colorImages, setColorImages] = useState<Record<string, string>>({});
   // Per-option price adjustments, kept as TEXT for the same reason stockQty is:
   // a numeric state forces the intermediate empty string back to 0 mid-keystroke,
   // so "-50" becomes impossible to type. Parsed once, on submit.
@@ -155,6 +158,7 @@ export function ProductModal({
       setImages(product.images);
       setSizes(product.sizes ?? []);
       setColors(product.colors ?? []);
+      setColorImages(product.colorImages ?? {});
       setSizeAdj(toAdjText(product.sizePriceAdj));
       setColorAdj(toAdjText(product.colorPriceAdj));
       setStockQty(String(product.stockQty));
@@ -166,6 +170,7 @@ export function ProductModal({
       setImages([]);
       setSizes([]);
       setColors([]);
+      setColorImages({});
       setSizeAdj({});
       setColorAdj({});
       setStockQty("0");
@@ -276,7 +281,19 @@ export function ProductModal({
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
   const toggleSize = toggle(setSizes, sizes);
-  const toggleColor = toggle(setColors, colors);
+
+  // Colours need their own toggle, not the generic one: dropping a colour must
+  // also drop whatever photo was matched to it — otherwise a re-added colour
+  // of the same name would resurrect a stale match the seller never chose.
+  const toggleColor = (value: string) => {
+    if (colors.includes(value)) {
+      setColorImages((m) => {
+        const { [value]: _removed, ...rest } = m;
+        return rest;
+      });
+    }
+    setColors((list) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]));
+  };
 
   /**
    * The preset for this category, plus any size already on the product that
@@ -366,6 +383,11 @@ export function ProductModal({
       // silently reprice the product — the moment they reselected it.
       sizePriceAdj: toAdjMap(sizeAdj, categoryHasSizes(data.category) ? sizes : []),
       colorPriceAdj: toAdjMap(colorAdj, colors),
+      // Pruned to colours actually offered, same reasoning as the adjustment
+      // maps above — a stale entry for a deselected colour must not survive.
+      colorImages: Object.fromEntries(
+        Object.entries(colorImages).filter(([c]) => colors.includes(c)),
+      ),
       summary: data.summary || null,
       description: data.description ?? "",
       metaDescription: data.metaDescription || null,
@@ -437,7 +459,13 @@ export function ProductModal({
                 <button
                   type="button"
                   aria-label="Remove image"
-                  onClick={() => setImages((imgs) => imgs.filter((_, j) => j !== i))}
+                  onClick={() => {
+                    setImages((imgs) => imgs.filter((_, j) => j !== i));
+                    // A colour matched to this exact photo can't point at it anymore.
+                    setColorImages((m) =>
+                      Object.fromEntries(Object.entries(m).filter(([, url]) => url !== src)),
+                    );
+                  }}
                   className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-ink text-white"
                 >
                   <X className="size-3" />
@@ -655,6 +683,50 @@ export function ProductModal({
                   Size and colour adjustments add together — an XL in a colour at
                   +100 costs the base price plus both.
                 </p>
+              </div>
+            )}
+
+            {/* Match colours to photos — lets the buyer's colour choice jump the
+                gallery to the photo that actually shows that colour, instead of
+                always starting at photo 1 regardless of what they picked.
+                Needs at least one uploaded photo to match against. */}
+            {colors.length > 0 && images.length > 0 && (
+              <div className="mt-2 space-y-2 rounded-card bg-stone-50 p-3">
+                <p className="text-xs font-semibold text-ink">
+                  Match colours to photos{" "}
+                  <span className="font-medium text-muted">— optional, tap a photo per colour</span>
+                </p>
+                {colors.map((c) => (
+                  <div key={c} className="flex items-center gap-3">
+                    <span className="w-20 shrink-0 text-sm font-semibold text-ink">{c}</span>
+                    <div className="flex flex-1 flex-wrap gap-1.5">
+                      {images.map((src, i) => {
+                        const selected = colorImages[c] === src;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            aria-label={`Show ${c} as image ${i + 1}`}
+                            aria-pressed={selected}
+                            onClick={() =>
+                              setColorImages((m) =>
+                                selected
+                                  ? Object.fromEntries(Object.entries(m).filter(([k]) => k !== c))
+                                  : { ...m, [c]: src }
+                              )
+                            }
+                            className={cn(
+                              "overflow-hidden rounded-lg ring-2 transition-all",
+                              selected ? "ring-primary" : "ring-transparent hover:ring-primary/40",
+                            )}
+                          >
+                            <ProductImage src={src} alt="" className="size-11 object-cover" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </fieldset>

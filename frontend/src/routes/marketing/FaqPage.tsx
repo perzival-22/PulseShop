@@ -45,12 +45,12 @@ export function FaqPage() {
             Question answered? Open your shop.
           </h2>
           <p className="max-w-sm text-sm text-ink/70">
-            It's free to start — five products, your own link, live in minutes.
+            It's free to start, five products, your own link, live in minutes.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link to="/signup">
               <Button size="lg" className="rounded-full">
-                Create your shop <ArrowRight className="size-5" />
+                Open your Shop <ArrowRight className="size-5" />
               </Button>
             </Link>
             <Link to="/prices">

@@ -25,6 +25,7 @@ export interface ProductRow {
   colors: string[] | null;
   size_price_adj?: Record<string, number> | null;
   color_price_adj?: Record<string, number> | null;
+  color_images?: Record<string, string> | null;
   rating: number | string;
   review_count: number;
   summary?: string | null;
@@ -76,6 +77,7 @@ export function toProduct(row: ProductRow): Product {
     colors: row.colors,
     sizePriceAdj: row.size_price_adj ?? {},
     colorPriceAdj: row.color_price_adj ?? {},
+    colorImages: row.color_images ?? undefined,
     rating: Number(row.rating),
     reviewCount: row.review_count,
     summary: row.summary ?? null,
@@ -133,6 +135,7 @@ export function productInputToRow(patch: Partial<ProductInput>): Record<string, 
   if (patch.colors !== undefined) row.colors = patch.colors;
   if (patch.sizePriceAdj !== undefined) row.size_price_adj = patch.sizePriceAdj;
   if (patch.colorPriceAdj !== undefined) row.color_price_adj = patch.colorPriceAdj;
+  if (patch.colorImages !== undefined) row.color_images = patch.colorImages;
   if (patch.summary !== undefined) row.summary = patch.summary;
   if (patch.description !== undefined) row.description = patch.description;
   return row;

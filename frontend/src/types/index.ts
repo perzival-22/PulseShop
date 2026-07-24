@@ -23,6 +23,13 @@ export interface Product {
   /** Colours the seller offers. Null/empty = this product has no colour choice. */
   colors: string[] | null;
   /**
+   * Which uploaded photo (a URL from `images`) shows the product in each
+   * colour. Keyed by colour name; a colour with no entry just shows the
+   * gallery's default order when picked. Optional: absent for every product
+   * created before this existed, and for one that never bothered to match them.
+   */
+  colorImages?: Record<string, string>;
+  /**
    * Per-option price adjustments in KES, keyed by size/colour name, added to
    * priceKes before the discount. A name that isn't a key is +0, so the common
    * "one price for everything" product carries two empty objects. See
