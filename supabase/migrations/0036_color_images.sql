@@ -47,10 +47,25 @@ alter table products
 -- reopened for editing — without this the edit form would load with the
 -- mapping missing and silently wipe it on the next save.
 --
--- Return type changes, so DROP + CREATE (same trap as 0026/0027) — the
--- revoke/grant below is load-bearing, not ceremony.
+-- THE SIGNATURE TO DROP IS THE 11-ARG ONE ENDING IN `numeric`. 0027 left this
+-- function at 10 args; 0030 then added `p_min_rating numeric`. Dropping the
+-- stale 10-arg signature is a silent no-op that leaves the live function in
+-- place and creates a SECOND overload instead — which is exactly what happened
+-- on the first attempt at this migration. The 10-arg drop below is kept only
+-- to clean that overload up where it exists; the 11-arg drop is the real one.
+--
+-- Return type changes, so this must be DROP + CREATE (create-or-replace cannot
+-- change it) — which resets the ACL to execute-to-public, making the
+-- revoke/grant at the bottom load-bearing, not ceremony. Same trap as
+-- 0026/0027/0028/0030.
+--
+-- The body below is the LIVE 0030 body (verified via pg_get_functiondef, not
+-- reconstructed from an older migration) plus color_images. Rebuilding it from
+-- 0027's text would have silently reverted `slug` (0028), the
+-- `shop_status <> 'closing'` visibility filter (0032) and the rating filter.
 -- ---------------------------------------------------------------------------
 drop function if exists search_products(uuid, text, text, text, int, text, int, int, text[], text[]);
+drop function if exists search_products(uuid, text, text, text, int, text, int, int, text[], text[], numeric);
 
 create or replace function search_products(
   p_merchant_id uuid default null,   -- null = every shop (universal search)
@@ -62,12 +77,14 @@ create or replace function search_products(
   p_limit       int  default 12,
   p_offset      int  default 0,
   p_sizes       text[] default null,  -- null / empty = any size
-  p_colors      text[] default null   -- null / empty = any colour
+  p_colors      text[] default null,  -- null / empty = any colour
+  p_min_rating  numeric default null  -- null = no rating constraint
 )
 returns table (
   id              uuid,
   merchant_id     uuid,
   name            text,
+  slug            text,
   sku             text,
   category        text,
   price_kes       integer,
@@ -109,7 +126,11 @@ as $$
            + variant_min_adj(pr.color_price_adj, pr.colors)
            ) as eff_price
     from products pr
-    where p_merchant_id is null or pr.merchant_id = p_merchant_id
+    where (p_merchant_id is null or pr.merchant_id = p_merchant_id)
+      and exists (
+        select 1 from merchants mm
+        where mm.id = pr.merchant_id and mm.shop_status <> 'closing'
+      )
   ),
   matched as (
     select p.*
@@ -129,9 +150,10 @@ as $$
       and (p_max_price is null or p.eff_price <= p_max_price)
       and (coalesce(array_length(p_sizes,  1), 0) = 0 or p.sizes  && p_sizes)
       and (coalesce(array_length(p_colors, 1), 0) = 0 or p.colors && p_colors)
+      and (p_min_rating is null or p.rating >= p_min_rating)
   )
   select
-    m.id, m.merchant_id, m.name, m.sku, m.category,
+    m.id, m.merchant_id, m.name, m.slug, m.sku, m.category,
     m.price_kes, m.discount_pct, m.stock_qty, m.status,
     m.images, m.sizes, m.colors, m.size_price_adj, m.color_price_adj, m.color_images,
     m.rating, m.review_count,
@@ -149,5 +171,5 @@ as $$
   offset (select off from bounds);
 $$;
 
-revoke execute on function search_products(uuid, text, text, text, int, text, int, int, text[], text[]) from public;
-grant  execute on function search_products(uuid, text, text, text, int, text, int, int, text[], text[]) to anon, authenticated;
+revoke execute on function search_products(uuid, text, text, text, int, text, int, int, text[], text[], numeric) from public;
+grant  execute on function search_products(uuid, text, text, text, int, text, int, int, text[], text[], numeric) to anon, authenticated;
